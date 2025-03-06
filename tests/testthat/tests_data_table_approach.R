@@ -54,7 +54,8 @@ test_that("simulate_test_DT produces monotonic p-values", {
   tree_dt <- generate_tree_DT(max_level, k, t)
   res <- simulate_test_DT(tree_dt,
     alpha = 0.05, k = k, effN = 1000, N_total = 1000, beta_base = 0.1,
-    local_adj_p_fn = local_simes, global_adj = "hommel", return_details = TRUE
+    local_adj_p_fn = local_simes, global_adj = "hommel", return_details = TRUE,
+    alpha_method = "fixed", final_global_adj = "none"
   )
 
   dt_sim <- res$treeDT
@@ -75,7 +76,7 @@ test_that("simulate_test_DT produces monotonic p-values", {
   set.seed(1234)
   res_spend <- simulate_test_DT(tree_dt,
     alpha = 0.05, k = k, effN = 1000, N_total = 1000, beta_base = 0.1,
-    local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = TRUE, alpha_method = "spending", spend_frac = .5
+    local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = TRUE, alpha_method = "spending"
   )
 
   dt_sim <- res_spend$treeDT
@@ -94,6 +95,25 @@ test_that("simulate_test_DT produces monotonic p-values", {
   res_invest <- simulate_test_DT(tree_dt,
     alpha = 0.05, k = k, effN = 1000, N_total = 1000, beta_base = 0.1,
     local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = TRUE, alpha_method = "investing"
+  )
+
+  dt_sim <- res_invest$treeDT
+
+  # For each node with a parent, we require:
+  #    child p_val >= parent's p_val.
+  # Merge dt_sim with itself to obtain parent's p-values.
+  parent_p_vals <- dt_sim[, .(node, parent_p = p_val)]
+  children <- dt_sim[!is.na(parent)]
+  children <- merge(children, parent_p_vals, by.x = "parent", by.y = "node", all.x = TRUE, sort = FALSE)
+
+  # Test that for each child, p_val is at least as high as parent's p_val.
+  expect_true(all(children$p_val >= children$parent_p, na.rm = TRUE))
+
+  ## And the more conservative approach
+  set.seed(1234)
+  res_fixed_adj <- simulate_test_DT(tree_dt,
+    alpha = 0.05, k = k, effN = 1000, N_total = 1000, beta_base = 0.1,
+    local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = TRUE, alpha_method = "fixed_k_adj"
   )
 
   dt_sim <- res_invest$treeDT
@@ -162,7 +182,8 @@ test_that("simulate_test_DT gates branches when the local adjusted p-value excee
   expect_true(nrow(gated_children) > 0)
 })
 
-test_that("simulating many p-values returns a value between 0 and 1", {
+
+test_that("simulating many p-values does what we expect", {
   set.seed(123456)
 
   ## We don't even need to adjust power as we "split" in order to control the
@@ -172,7 +193,7 @@ test_that("simulating many p-values returns a value between 0 and 1", {
   res1 <- simulate_many_runs_DT(
     n_sim = 1000, t = 0, k = 3, max_level = 3,
     alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = FALSE,
-    local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = FALSE
+    local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = FALSE, final_global_adj = "none", alpha_method = "fixed"
   )
 
   ## On average does only one single test and doesn't reject
@@ -187,6 +208,15 @@ test_that("simulating many p-values returns a value between 0 and 1", {
   ## Power does not have meaning when all hypotheses are true
   expect_equal(res1[["power"]], NaN)
   expect_equal(res1[["bottom_up_power"]], NaN)
+
+  ## Checking that the arguments work.
+  alpha_methods <- c("fixed", "fixed_k_adj", "adjust_k_adj", "spending", "investing")
+  final_adj_methods <- c("none", "fdr", "fwer")
+  local_adj_methods <- c("local_hommel_all_ps", "local_unadj_all_ps")
+
+  parms_t0 <- expand.grid(alpha_method = alpha_methods, final_adj_method = final_adj_methods, local_adj_method = local_adj_methods)
+
+  ## TODO: Start here
 
   ## now for t=1
   set.seed(12345)
@@ -235,6 +265,21 @@ test_that("simulating many p-values returns a value between 0 and 1", {
   expect_lt(res3["bottom_up_false_error"], .05 + sim_err)
   expect_lt(res3["bottom_up_power"], res3["leaf_power"])
 
+  set.seed(12345)
+  res3a <- simulate_many_runs_DT(
+    n_sim = 1000, t = .5, k = 3, max_level = 3,
+    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = TRUE,
+    local_adj_p_fn = local_simes, global_adj = "hommel", return_details = FALSE
+  )
+  res3a
+
+  set.seed(12345)
+  res3b <- simulate_many_runs_DT(
+    n_sim = 1000, t = .5, k = 3, max_level = 3,
+    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = FALSE,
+    local_adj_p_fn = local_simes, global_adj = "hommel", return_details = FALSE
+  )
+  res3b
   ## Notice that strong FWER control ot hold with adj_effN=FALSE. So, we need
   ## monotonicity and local gate but also need to reduce power when effects
   ## are mixed.
@@ -258,8 +303,8 @@ test_that("simulating many p-values returns a value between 0 and 1", {
 
   set.seed(123456)
   res5 <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 5, max_level = 5,
-    alpha = 0.05, N_total = 10000000, beta_base = 0.1, adj_effN = TRUE,
+    n_sim = 1000, t = .5, k = 3, max_level = 3,
+    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = TRUE,
     local_adj_p_fn = local_unadj_all_ps,
     global_adj = "hommel", return_details = FALSE
   )
@@ -274,12 +319,13 @@ test_that("simulating many p-values returns a value between 0 and 1", {
   set.seed(123456)
   res6 <- simulate_many_runs_DT(
     n_sim = 1000, t = .5, k = 5, max_level = 5,
-    alpha = 0.05, N_total = 10000000, beta_base = 0.1, adj_effN = FALSE,
+    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = FALSE,
     local_adj_p_fn = local_hommel_all_ps,
     global_adj = "hommel", return_details = FALSE
   )
   res6
   expect_gt(res6["false_error"], .05 + sim_err)
+
 
 
   ## So you need the splitting and monotonicity (which does the majority of the error control work),

@@ -17,9 +17,7 @@ simulate_many_runs_DT(
   return_details = FALSE,
   global_adj = "hommel",
   alpha_method = "fixed",
-  spend_frac = 0.5,
-  invest_frac = 0.5,
-  invest_bonus = 0.01
+  final_global_adj = "none"
 )
 }
 \arguments{

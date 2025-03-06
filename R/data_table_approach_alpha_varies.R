@@ -16,8 +16,10 @@
 #'
 #' \itemize{
 #'   \item For \code{"fixed"}, each child inherits the full α,
-#'   \item For \code{"spending"}, the children are tested at level \code{spend_frac * parent's alpha_alloc},
-#'   \item For \code{"investing"}, the children are tested at level \code{invest_frac * parent's alpha_alloc + invest_bonus}.
+#'   \item For \code{"fixed_k_adj"}, each child is tested at \code{alpha/(1+alpha k)} which should be conservative
+#'   \item For \code{"adaptive_k_adj"}, each child is tested at \code{parent_p + (1-parent_p)(alpha/k)} which should be conservative
+#'   \item For \code{"spending"}, the children are tested at level \code{parent_alpha + max((alpha-parent_p),0)/k}
+#'   \item For \code{"investing"}, the children are tested at level \code{parent_alpha + max((parent_alpha-parent_p),0)/k}.
 #' }
 #'
 #' @param treeDT A data.table as produced by \code{generate_tree_DT()}.
@@ -27,13 +29,11 @@
 #' @param N_total Numeric. The total sample size at the root.
 #' @param beta_base Numeric. The base parameter for the beta distribution.
 #' @param adj_effN Logical. Whether to adjust the effective sample size at deeper levels.
-#' @param local_adj_p_fn Function. A function (e.g. \code{local_simes} or \code{local_hommel_all_ps})
-#'   that adjusts p-values at a node.
+#' @param local_adj_p_fn Function. A function (e.g. \code{local_simes} or \code{local_hommel_all_ps} or \code{local_unadj_all_ps})
+#'   that adjusts p-values at a node. The \code{local_unadj_all_ps} function does no local adjustment.
 #' @param global_adj Character. The method to adjust the leaves (e.g. "hommel").
-#' @param alpha_method Character. One of \code{"fixed"}, \code{"spending"}, or \code{"investing"}.
-#' @param spend_frac Numeric. For \code{"spending"}: fraction of parent's α allocated to children (default 0.5).
-#' @param invest_frac Numeric. For \code{"investing"}: fraction of parent's α allocated to children (default 0.5).
-#' @param invest_bonus Numeric. For \code{"investing"}: a bonus added to the children’s allocation (default 0.01).
+#' @param alpha_method Character. One of \code{"fixed"}, \code{"spending"}, \code{"investing"}, \code{"fixed_k_adj"}, \code{"adaptive_k_adj"}.
+#' @param final_global_adj Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}. The \code{"fdr"} and \code{"fwer"} options should only be used when \code{local_adj_p_fn} is \code{local_unadj_all_ps}.
 #' @param return_details Logical. Whether to return the full simulated data.table.
 #'
 #' @return A list with components:
@@ -53,8 +53,7 @@
 #' @export
 simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
                              adj_effN = TRUE, local_adj_p_fn = local_simes, global_adj = "hommel",
-                             alpha_method = "fixed", spend_frac = 0.5,
-                             invest_frac = 0.5, invest_bonus = 0.01, return_details = TRUE) {
+                             alpha_method = "fixed", return_details = TRUE, final_global_adj = "none") {
   # Work on a copy so that the original tree is preserved.
   tree_sim <- copy(treeDT)
   tree_sim[, `:=`(p_val = NA_real_, alpha_alloc = NA_real_)]
@@ -104,6 +103,7 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
       parent_alpha <- active_parents$alpha_alloc[i]
       parent_p <- active_parents$p_val[i]
 
+      ## TODO: move this to a function
       # Determine children threshold based on chosen alpha method.
       if (alpha_method == "fixed") {
         child_threshold <- parent_alpha # no change: always use the fixed α.
@@ -120,8 +120,12 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
         ## child_threshold <- invest_frac * parent_alpha + invest_bonus
         children_alpha_adjust <- max((parent_alpha - parent_p), 0) / k
         child_threshold <- parent_alpha + children_alpha_adjust
+      } else if (alpha_method == "fixed_k_adj") {
+        child_threshold <- alpha / (1 + alpha * k)
+      } else if (alpha_method == "adaptive_k_adj") {
+        child_threshold <- parent_p + (1 - parent_p) * (alpha / k)
       } else {
-        stop("alpha_method must be one of 'fixed', 'spending', or 'investing'.")
+        stop("alpha_method must be one of 'fixed', 'spending', or 'investing' or 'fixed_k_adj' or 'adaptive_k_adj'.")
       }
 
       # Get children of the current parent.
@@ -139,14 +143,17 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
       }
 
       # For children: if p_sim is not yet simulated, simulate it using parent's p-value.
+      ## This also implements monotonicity
       child_rows[is.na(p_sim), p_sim := fifelse(
         nonnull,
         parent_p + (1 - parent_p) * rbeta(.N, effective_beta, 1),
         runif(.N, min = parent_p, max = 1)
       )]
 
-      # Enforce global monotonicity: the child's p-value is at least parent's p-value.
-      child_rows[, p_val := pmax(parent_p, p_sim)]
+      ## p_sim is like the temporary p_value. It exists here because we did the
+      ## bottom up tests first on all of the leaves
+
+      child_rows[is.na(p_val), p_val := p_sim]
 
       # Locally adjust the group of children using the specified local adjustment function.
       child_rows[, local_adj_p := local_adj_p_fn(p_val), by = parent]
@@ -168,6 +175,20 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
       )]
     } # end loop over active parents at level l
   } # end levels
+
+  ## This next does a final global adjustment given the p-values that survive the gating and monotonicity
+  if (final_global_adj == "fdr") {
+    tree_sim[, p_val_final_adj := p.adjust(p_val, method = "BH")]
+  } else if (final_global_adj == "fwer") {
+    ## This next might be slower than the hommel() function
+    ## tree_sim[, p_val_final_adj := p.adjust(p_val,method="hommel")
+    tree_sim[, p_val_final_adj := hommel(p_val)@adjusted]
+  } else if (final_global_adj == "none") {
+    ## No adjustment
+    tree_sim[, p_val_final_adj := p_val]
+  } else {
+    stop("final_global_adj must be one of 'fdr', 'fwer', or 'none'")
+  }
 
   # ---- Summarize errors and discoveries ----
   num_nodes_tested <- sum(!is.na(tree_sim$p_val))
@@ -243,17 +264,15 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
 #' @export
 simulate_many_runs_DT <- function(n_sim, t, k, max_level, alpha, N_total, beta_base = 0.1,
                                   adj_effN = TRUE, local_adj_p_fn = local_simes, return_details = FALSE,
-                                  global_adj = "hommel", alpha_method = "fixed",
-                                  spend_frac = 0.5, invest_frac = 0.5, invest_bonus = 0.01) {
+                                  global_adj = "hommel", alpha_method = "fixed", final_global_adj = "none") {
   treeDT <- generate_tree_DT(max_level, k, t)
   res <- replicate(
     n_sim,
     simulate_test_DT(treeDT, alpha, k,
       effN = N_total, N_total = N_total, beta_base = beta_base,
       adj_effN = adj_effN, local_adj_p_fn = local_adj_p_fn, global_adj = global_adj,
-      alpha_method = alpha_method, spend_frac = spend_frac,
-      invest_frac = invest_frac, invest_bonus = invest_bonus,
-      return_details = return_details
+      alpha_method = alpha_method,
+      return_details = return_details, final_global_adj = final_global_adj
     ),
     simplify = FALSE
   )

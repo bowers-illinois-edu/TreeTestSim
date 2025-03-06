@@ -15,10 +15,8 @@ simulate_test_DT(
   local_adj_p_fn = local_simes,
   global_adj = "hommel",
   alpha_method = "fixed",
-  spend_frac = 0.5,
-  invest_frac = 0.5,
-  invest_bonus = 0.01,
-  return_details = TRUE
+  return_details = TRUE,
+  final_global_adj = "none"
 )
 }
 \arguments{
@@ -36,20 +34,16 @@ simulate_test_DT(
 
 \item{adj_effN}{Logical. Whether to adjust the effective sample size at deeper levels.}
 
-\item{local_adj_p_fn}{Function. A function (e.g. \code{local_simes} or \code{local_hommel_all_ps})
-that adjusts p-values at a node.}
+\item{local_adj_p_fn}{Function. A function (e.g. \code{local_simes} or \code{local_hommel_all_ps} or \code{local_unadj_all_ps})
+that adjusts p-values at a node. The \code{local_unadj_all_ps} function does no local adjustment.}
 
 \item{global_adj}{Character. The method to adjust the leaves (e.g. "hommel").}
 
-\item{alpha_method}{Character. One of \code{"fixed"}, \code{"spending"}, or \code{"investing"}.}
-
-\item{spend_frac}{Numeric. For \code{"spending"}: fraction of parent's α allocated to children (default 0.5).}
-
-\item{invest_frac}{Numeric. For \code{"investing"}: fraction of parent's α allocated to children (default 0.5).}
-
-\item{invest_bonus}{Numeric. For \code{"investing"}: a bonus added to the children’s allocation (default 0.01).}
+\item{alpha_method}{Character. One of \code{"fixed"}, \code{"spending"}, \code{"investing"}, \code{"fixed_k_adj"}, \code{"adaptive_k_adj"}.}
 
 \item{return_details}{Logical. Whether to return the full simulated data.table.}
+
+\item{final_global_adj}{Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}. The \code{"fdr"} and \code{"fwer"} options should only be used when \code{local_adj_p_fn} is \code{local_unadj_all_ps}.}
 }
 \value{
 A list with components:
@@ -74,8 +68,10 @@ its allocated threshold) its children are tested at a level that depends on the 
 
 \itemize{
 \item For \code{"fixed"}, each child inherits the full α,
-\item For \code{"spending"}, the children are tested at level \code{spend_frac * parent's alpha_alloc},
-\item For \code{"investing"}, the children are tested at level \code{invest_frac * parent's alpha_alloc + invest_bonus}.
+\item For \code{"fixed_k_adj"}, each child is tested at \code{alpha/(1+alpha k)} which should be conservative
+\item For \code{"adaptive_k_adj"}, each child is tested at \code{parent_p + (1-parent_p)(alpha/k)} which should be conservative
+\item For \code{"spending"}, the children are tested at level \code{parent_alpha + max((alpha-parent_p),0)/k}
+\item For \code{"investing"}, the children are tested at level \code{parent_alpha + max((parent_alpha-parent_p),0)/k}.
 }
 }
 \examples{
