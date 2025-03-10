@@ -183,40 +183,152 @@ test_that("simulate_test_DT gates branches when the local adjusted p-value excee
 })
 
 
+test_that("All arguments work. No errors", {
+  ## Checking that the arguments work.
+  alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
+  final_adj_methods <- c("none", "fdr", "fwer")
+  local_adj_methods <- c("local_simes", "local_hommel_all_ps", "local_unadj_all_ps")
+  adj_effN <- c(TRUE, FALSE)
+
+  parms <- as.data.table(expand.grid(
+    alpha_method = alpha_methods,
+    final_adj_method = final_adj_methods,
+    local_adj_method = local_adj_methods,
+    adj_effN = adj_effN,
+    stringsAsFactors = FALSE
+  ))
+  parms[, idx := 1:nrow(parms)]
+  setkey(parms, "idx")
+
+  set.seed(12345)
+  res_t0_lst <- lapply(parms$idx, function(i) {
+    x <- parms[.(i)]
+    message(paste(c(i, x[1, ]), collapse = " "))
+    tmp <- simulate_many_runs_DT(
+      n_sim = 10, t = 0, k = 3, max_level = 3,
+      alpha = 0.05, N_total = 1000, beta_base = 0.1,
+      adj_effN = x$adj_effN,
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      global_adj = "hommel",
+      return_details = FALSE,
+      final_global_adj = x$final_adj_method,
+      alpha_method = x$alpha_method, multicore = TRUE
+    )
+    return(tmp)
+  })
+
+  set.seed(12345)
+  res_t1_lst <- lapply(parms$idx, function(i) {
+    x <- parms[.(i)]
+    message(paste(c(i, x[1, ]), collapse = " "))
+    tmp <- simulate_many_runs_DT(
+      n_sim = 10, t = 1, k = 3, max_level = 3,
+      alpha = 0.05, N_total = 1000, beta_base = 0.1,
+      adj_effN = x$adj_effN,
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      global_adj = "hommel",
+      return_details = FALSE,
+      final_global_adj = x$final_adj_method,
+      alpha_method = x$alpha_method
+    )
+    return(tmp)
+  })
+
+  set.seed(12345)
+  res_t_half_lst <- lapply(parms$idx, function(i) {
+    x <- parms[.(i)]
+    message(paste(c(i, x[1, ]), collapse = " "))
+    tmp <- simulate_many_runs_DT(
+      n_sim = 10, t = .5, k = 3, max_level = 3,
+      alpha = 0.05, N_total = 1000, beta_base = 0.1,
+      adj_effN = x$adj_effN,
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      global_adj = "hommel",
+      return_details = FALSE,
+      final_global_adj = x$final_adj_method,
+      alpha_method = x$alpha_method
+    )
+    return(tmp)
+  })
+
+  res_t0 <- do.call("rbind", res_t0_lst)
+  res_t1 <- do.call("rbind", res_t1_lst)
+  res_t_half <- do.call("rbind", res_t_half_lst)
+
+  ## basically this is a test that it ran without errors
+  expect_equal(nrow(res_t0), nrow(parms))
+  expect_equal(nrow(res_t1), nrow(parms))
+  expect_equal(nrow(res_t_half), nrow(parms))
+})
+
+## TODO: Don't do 10,000 sims on CRAN 
+
 test_that("simulating many p-values does what we expect", {
+  alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
+  final_adj_methods <- c("none", "fdr", "fwer")
+  local_adj_methods <- c("local_simes", "local_hommel_all_ps", "local_unadj_all_ps")
+  adj_effN <- c(TRUE, FALSE)
+
+  parms <- as.data.table(expand.grid(
+    alpha_method = alpha_methods,
+    final_adj_method = final_adj_methods,
+    local_adj_method = local_adj_methods,
+    adj_effN = adj_effN,
+    stringsAsFactors = FALSE
+  ))
+  parms[, idx := 1:nrow(parms)]
+  setkey(parms, "idx")
+  nrow(parms)
+
   set.seed(123456)
+  res_t0_lst <- lapply(parms$idx, function(i) {
+    x <- parms[.(i)]
+    message(paste(c(i, x[1, ]), collapse = " "))
+    tmp <- simulate_many_runs_DT(
+      n_sim = 10000, t = 0, k = 3, max_level = 3,
+      alpha = 0.05, N_total = 1000, beta_base = 0.1,
+      adj_effN = x$adj_effN,
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      global_adj = "hommel",
+      return_details = FALSE,
+      final_global_adj = x$final_adj_method,
+      alpha_method = x$alpha_method, multicore = TRUE
+    )
+    x[, names(tmp) := as.list(tmp)]
+    return(x)
+  })
+
+  res_t0 <- rbindlist(res_t0_lst)
+
+  ## Should control res1 within simulation error and we are only doing 1000 sims here
+  sim_err <- 2 * sqrt(.05 * (1 - .05) / 10000)
+  .05 + sim_err
+  summary(res_t0$false_error)
+  summary(res_t0$false_error < .05 + sim_err)
+  res_t0[false_error > .05 + sim_err, ]
+
+  expect_lt(max(res_t0$false_error), .06)
 
   ## We don't even need to adjust power as we "split" in order to control the
   ## FWER when t=0 or t=1 (which has no errors anyway and is only shown here
   ## for completeness)
 
-  res1 <- simulate_many_runs_DT(
-    n_sim = 1000, t = 0, k = 3, max_level = 3,
-    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = FALSE,
-    local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = FALSE, final_global_adj = "none", alpha_method = "fixed"
-  )
+  expect_lt(max(res_t0[!(adj_effN), false_error]), .06)
+  ## And we don't have to use any local control, or any other tactic. Monotonicity, validity (i.e. p~U()), and gating are all we need
+  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps", false_error]), .06)
+  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(adj_effN) & final_adj_method == "none", false_error]), .06)
+  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(adj_effN) & final_adj_method == "none" & alpha_method == "fixed", false_error]), .06)
 
-  ## On average does only one single test and doesn't reject
-  res1
-  expect_true(is.numeric(res1))
-  ## Should control res1 within simulation error
-  sim_err <- 2 * sqrt(.05 * (1 - .05) / 1000)
-
-  expect_lt(res1["false_error"], .05 + sim_err)
-  expect_lt(res1["bottom_up_false_error"], .05 + sim_err)
+  ## Check on the bottom up approach
+  expect_lt(max(res_t0$bottom_up_false_error), .06)
 
   ## Power does not have meaning when all hypotheses are true
-  expect_equal(res1[["power"]], NaN)
-  expect_equal(res1[["bottom_up_power"]], NaN)
+  expect_equal(unique(res_t0[["power"]]), NaN)
+  expect_equal(unique(res1[["bottom_up_power"]]), NaN)
 
-  ## Checking that the arguments work.
-  alpha_methods <- c("fixed", "fixed_k_adj", "adjust_k_adj", "spending", "investing")
-  final_adj_methods <- c("none", "fdr", "fwer")
-  local_adj_methods <- c("local_hommel_all_ps", "local_unadj_all_ps")
 
-  parms_t0 <- expand.grid(alpha_method = alpha_methods, final_adj_method = final_adj_methods, local_adj_method = local_adj_methods)
+  TODO start here
 
-  ## TODO: Start here
 
   ## now for t=1
   set.seed(12345)

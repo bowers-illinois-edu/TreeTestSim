@@ -178,11 +178,11 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
 
   ## This next does a final global adjustment given the p-values that survive the gating and monotonicity
   if (final_global_adj == "fdr") {
-    tree_sim[, p_val_final_adj := p.adjust(p_val, method = "BH")]
+    tree_sim[!is.na(p_val), p_val_final_adj := p.adjust(p_val, method = "BH")]
   } else if (final_global_adj == "fwer") {
     ## This next might be slower than the hommel() function
     ## tree_sim[, p_val_final_adj := p.adjust(p_val,method="hommel")
-    tree_sim[, p_val_final_adj := hommel(p_val)@adjusted]
+    tree_sim[!is.na(p_val), p_val_final_adj := hommel(p_val)@adjusted]
   } else if (final_global_adj == "none") {
     ## No adjustment
     tree_sim[, p_val_final_adj := p_val]
@@ -261,20 +261,30 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
 #' )
 #' print(fwer)
 #'
+#' @importFrom parallel mclapply
 #' @export
 simulate_many_runs_DT <- function(n_sim, t, k, max_level, alpha, N_total, beta_base = 0.1,
                                   adj_effN = TRUE, local_adj_p_fn = local_simes, return_details = FALSE,
-                                  global_adj = "hommel", alpha_method = "fixed", final_global_adj = "none") {
+                                  global_adj = "hommel", alpha_method = "fixed", final_global_adj = "none", multicore = FALSE) {
   treeDT <- generate_tree_DT(max_level, k, t)
-  res <- replicate(
-    n_sim,
-    simulate_test_DT(treeDT, alpha, k,
-      effN = N_total, N_total = N_total, beta_base = beta_base,
-      adj_effN = adj_effN, local_adj_p_fn = local_adj_p_fn, global_adj = global_adj,
-      alpha_method = alpha_method,
-      return_details = return_details, final_global_adj = final_global_adj
-    ),
-    simplify = FALSE
+
+  if (multicore) {
+    ncores <- future::availableCores()
+  } else {
+    ncores <- 1
+  }
+
+  res <- mclapply(
+    seq_len(n_sim),
+    function(i) {
+      simulate_test_DT(treeDT, alpha, k,
+        effN = N_total, N_total = N_total, beta_base = beta_base,
+        adj_effN = adj_effN, local_adj_p_fn = local_adj_p_fn, global_adj = global_adj,
+        alpha_method = alpha_method,
+        return_details = return_details, final_global_adj = final_global_adj
+      )
+    },
+    mc.cores = ncores, mc.set.seed = TRUE
   )
 
   ## res_dt <- rbindlist(lapply(res, function(x) x$sim_res))
