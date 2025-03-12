@@ -17,7 +17,8 @@ simulate_many_runs_DT(
   return_details = FALSE,
   global_adj = "hommel",
   alpha_method = "fixed",
-  final_global_adj = "none"
+  final_global_adj = "none",
+  multicore = FALSE
 )
 }
 \arguments{

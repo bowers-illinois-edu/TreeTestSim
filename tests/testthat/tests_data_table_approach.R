@@ -182,7 +182,7 @@ test_that("simulate_test_DT gates branches when the local adjusted p-value excee
   expect_true(nrow(gated_children) > 0)
 })
 
-
+## TODO: exclude this next from CRAN.
 test_that("All arguments work. No errors", {
   ## Checking that the arguments work.
   alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
@@ -261,7 +261,7 @@ test_that("All arguments work. No errors", {
   expect_equal(nrow(res_t_half), nrow(parms))
 })
 
-## TODO: Don't do 10,000 sims on CRAN 
+## TODO: Don't do 10,000 sims on CRAN
 
 test_that("simulating many p-values does what we expect", {
   alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
@@ -276,9 +276,11 @@ test_that("simulating many p-values does what we expect", {
     adj_effN = adj_effN,
     stringsAsFactors = FALSE
   ))
-  parms[, idx := 1:nrow(parms)]
+  parms[, idx := seq_len(nrow(parms))]
   setkey(parms, "idx")
   nrow(parms)
+
+  n_sims <- 10000
 
   set.seed(123456)
   res_t0_lst <- lapply(parms$idx, function(i) {
@@ -301,184 +303,180 @@ test_that("simulating many p-values does what we expect", {
   res_t0 <- rbindlist(res_t0_lst)
 
   ## Should control res1 within simulation error and we are only doing 1000 sims here
-  sim_err <- 2 * sqrt(.05 * (1 - .05) / 10000)
+  sim_err <- 2 * sqrt(.5 * (1 - .5) / 10000)
   .05 + sim_err
   summary(res_t0$false_error)
   summary(res_t0$false_error < .05 + sim_err)
-  res_t0[false_error > .05 + sim_err, ]
 
-  expect_lt(max(res_t0$false_error), .06)
+  expect_lt(max(res_t0$false_error), .05 + sim_err)
 
   ## We don't even need to adjust power as we "split" in order to control the
   ## FWER when t=0 or t=1 (which has no errors anyway and is only shown here
   ## for completeness)
 
-  expect_lt(max(res_t0[!(adj_effN), false_error]), .06)
+  expect_lt(max(res_t0[!(adj_effN), false_error]), .05 + sim_err)
   ## And we don't have to use any local control, or any other tactic. Monotonicity, validity (i.e. p~U()), and gating are all we need
-  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps", false_error]), .06)
-  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(adj_effN) & final_adj_method == "none", false_error]), .06)
-  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(adj_effN) & final_adj_method == "none" & alpha_method == "fixed", false_error]), .06)
+  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps", false_error]), .05 + sim_err)
+  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(adj_effN) & final_adj_method == "none", false_error]), .05 + sim_err)
+  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(adj_effN) & final_adj_method == "none" & alpha_method == "fixed", false_error]), .05 + sim_err)
 
   ## Check on the bottom up approach
-  expect_lt(max(res_t0$bottom_up_false_error), .06)
+  expect_lt(max(res_t0$bottom_up_false_error), .05 + sim_err)
 
   ## Power does not have meaning when all hypotheses are true
   expect_equal(unique(res_t0[["power"]]), NaN)
-  expect_equal(unique(res1[["bottom_up_power"]]), NaN)
+  expect_equal(unique(res_t0[["bottom_up_power"]]), NaN)
+
+  ## This next is all about power. Should have no false positive rate since all
+  ## hypotheses are false
 
 
-  TODO start here
+  set.seed(123456)
+  res_t1_lst <- lapply(parms$idx, function(i) {
+    x <- parms[.(i)]
+    message(paste(c(i, x[1, ]), collapse = " "))
+    tmp <- simulate_many_runs_DT(
+      n_sim = 10000, t = 1, k = 3, max_level = 3,
+      alpha = 0.05, N_total = 1000, beta_base = 0.1,
+      adj_effN = x$adj_effN,
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      global_adj = "hommel",
+      return_details = FALSE,
+      final_global_adj = x$final_adj_method,
+      alpha_method = x$alpha_method, multicore = TRUE
+    )
+    x[, names(tmp) := as.list(tmp)]
+    return(x)
+  })
 
+  res_t1 <- rbindlist(res_t1_lst)
 
-  ## now for t=1
-  set.seed(12345)
-  res2 <- simulate_many_runs_DT(
-    n_sim = 1000, t = 1, k = 3, max_level = 3,
-    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = FALSE,
-    local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = FALSE
-  )
+  expect_equal(unique(res_t1$false_error), 0)
+  expect_equal(unique(res_t1$bottom_up_false_error), 0)
 
-  ## Total nodes
-  sum(3^seq(0, 3))
-  (3^(3 + 1) - 1) / (3 - 1)
-  ## Total leaves
-  3^3
+  ## We don't even need to adjust power as we "split" in order to control the
+  ## FWER when t=0 or t=1 (which has no errors anyway and is only shown here
+  ## for completeness)
 
-  ## On average we test about 9 nodes --- all of which are nonnull no surprise
-  ## here. On average we make about 6 true discoveries. On average the
-  ## proportion of true discoveries of non-null nodes tested is about .55. We
-  ## do get to the leaves in this case --- tending to test about 2 of the 27
-  ## leaves and rejecting correcting about 2.5 of them.
+  ## Check on the bottom up approach
+  expect_lt(max(res_t1$bottom_up_false_error), .05 + sim_err)
 
-  res2
-  ## No false positives possible here
-  ## We should have more power than the bottom up approach
-  ## Although we do fewer tests overall
-  expect_lt(res2["false_error"], .05 + sim_err)
-  expect_lt(res2["bottom_up_false_error"], .05 + sim_err)
-  expect_lt(res2["bottom_up_power"], res2["power"])
-  expect_lt(res2["bottom_up_power"], res2["leaf_power"])
+  ## Power does not have meaning when all hypotheses are true
+
+  summary(res_t1)
+  ## The top down method rejects more nodes and more leaves
+  expect_true(all(res_t1$bottom_up_power - res_t1$power < 0))
+  expect_true(all(res_t1$bottom_up_power - res_t1$leaf_power < 0))
 
   ### So, weak control works even when we don't split the data at each node.
   ### This is not realistic. But nice to know.
 
-  ## Now "split the data" (i.e. reduce propostion of p<.05 from the nonnull
-  ## nodes by increasing the first parameter of rbeta)
-
-  set.seed(12345)
-  res3 <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 3, max_level = 3,
-    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = TRUE,
-    local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = FALSE
-  )
-  res3
-  ## Here we test fewer nodes
-  expect_lt(res3["false_error"], .05 + sim_err)
-  expect_lt(res3["bottom_up_false_error"], .05 + sim_err)
-  expect_lt(res3["bottom_up_power"], res3["leaf_power"])
-
-  set.seed(12345)
-  res3a <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 3, max_level = 3,
-    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = TRUE,
-    local_adj_p_fn = local_simes, global_adj = "hommel", return_details = FALSE
-  )
-  res3a
-
-  set.seed(12345)
-  res3b <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 3, max_level = 3,
-    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = FALSE,
-    local_adj_p_fn = local_simes, global_adj = "hommel", return_details = FALSE
-  )
-  res3b
-  ## Notice that strong FWER control ot hold with adj_effN=FALSE. So, we need
-  ## monotonicity and local gate but also need to reduce power when effects
-  ## are mixed.
-  res4 <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 3, max_level = 3,
-    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = FALSE,
-    local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = FALSE
-  )
-  res4
-  expect_gt(res4["false_error"], .05 + sim_err)
-  expect_lt(res4["bottom_up_false_error"], .05 + sim_err)
-
-  ## Notice that the reduction in power is doing a lot of work here even
-  ## without the local adjustment. For example, even with a large k and large l
-  ## the algorithm to reduce N is nonlinear -- starts by equal splitting by k
-  ## but never goes to 0 (it goes no further than 1/100 of the original).
-  ## this next:
-
-  # number of nodes is large here
-  (5^(5 + 1) - 1) / (5 - 1)
+  ## Now try it with t=.1 which is .1*.27 \approx 2 leaves
 
   set.seed(123456)
-  res5 <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 3, max_level = 3,
-    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = TRUE,
-    local_adj_p_fn = local_unadj_all_ps,
-    global_adj = "hommel", return_details = FALSE
-  )
-  res5
+  res_t_some_lst <- lapply(parms$idx, function(i) {
+    x <- parms[.(i)]
+    message(paste(c(i, x[1, ]), collapse = " "))
+    tmp <- simulate_many_runs_DT(
+      n_sim = 1000, t = .1, k = 3, max_level = 3,
+      alpha = 0.05, N_total = 1000, beta_base = 0.1,
+      adj_effN = x$adj_effN,
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      global_adj = "hommel",
+      return_details = FALSE,
+      final_global_adj = x$final_adj_method,
+      alpha_method = x$alpha_method, multicore = TRUE
+    )
+    x[, names(tmp) := as.list(tmp)]
+    return(x)
+  })
+  sim_err <- 2 * sqrt(.5 * (1 - .5) / 1000)
+  res_t_some <- rbindlist(res_t_some_lst)
 
-  ## So,the FWER is like .10 in a tree with 3000+ nodes even without local
-  ## adjustment, just monotonicity and sample splitting
+  summary(res_t_some)
 
-  expect_gt(res5["false_error"], .05 + sim_err)
+  ## Which approaches control the FWER?
+  parm_nms <- names(res_t_some)[1:4]
 
-  ## local hommel doesn't really help that much
+  res_t_some_ok_fwer <- res_t_some[false_error <= .05 + sim_err, ]
+
+  ## Multiple possibilities:
+  lapply(res_t_some_ok_fwer[, .SD, .SDcols = parm_nms], table)
+
+  ## Which have the highest power?
+  res_t_some_ok_fwer[order(power, decreasing = TRUE), .SD, .SDcols = c("power", "leaf_power", parm_nms)]
+
+  ## What among those without a final adjustment method?
+
+  res_t_some_ok_fwer[final_adj_method == "none", ][order(power, decreasing = TRUE), .SD, .SDcols = c("power", "leaf_power", parm_nms)]
+
+  ## And without any local adjustment but with an adaptive alpha adjustment
+
+  res_t_some_ok_fwer[final_adj_method == "none" & local_adj_method == "local_unadj_all_ps", ][order(power, decreasing = TRUE), .SD, .SDcols = c("power", "leaf_power", parm_nms)]
+
+
+  ## Compare to a situation with more k and more opportunities for ungating (t=.5)
+
   set.seed(123456)
-  res6 <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 5, max_level = 5,
-    alpha = 0.05, N_total = 1000, beta_base = 0.1, adj_effN = FALSE,
-    local_adj_p_fn = local_hommel_all_ps,
-    global_adj = "hommel", return_details = FALSE
-  )
-  res6
-  expect_gt(res6["false_error"], .05 + sim_err)
+  (10^(3 + 1) - 1) / (10 - 1)
+  sum(10^(0:3))
+  sum(10^(0:4))
 
+  res_t_half_lst <- lapply(parms$idx, function(i) {
+    x <- parms[.(i)]
+    message(paste(c(i, x[1, ]), collapse = " "))
+    tmp <- simulate_many_runs_DT(
+      n_sim = 1000, t = .5, k = 10, max_level = 4,
+      alpha = 0.05, N_total = 1000, beta_base = 0.1,
+      adj_effN = x$adj_effN,
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      global_adj = "hommel",
+      return_details = FALSE,
+      final_global_adj = x$final_adj_method,
+      alpha_method = x$alpha_method, multicore = TRUE
+    )
+    x[, names(tmp) := as.list(tmp)]
+    return(x)
+  })
+  sim_err <- 2 * sqrt(.5 * (1 - .5) / 1000)
+  res_t_half <- rbindlist(res_t_half_lst)
+  save(res_t_half, res_t_some, file = "res_t_tests.rda")
+  summary(res_t_half)
 
+  ## Which approaches control the FWER?
+  parm_nms <- names(res_t_half)[1:4]
 
-  ## So you need the splitting and monotonicity (which does the majority of the error control work),
-  ## and then the local hommel p-value adjustment
+  res_t_half_ok_fwer <- res_t_half[false_error <= .05 + sim_err, ]
 
-  set.seed(123456)
-  res7 <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 5, max_level = 5,
-    alpha = 0.05, N_total = 10000000, beta_base = 0.1, adj_effN = TRUE,
-    local_adj_p_fn = local_hommel_all_ps,
-    global_adj = "hommel", return_details = FALSE
-  )
-  res7
-  ## Notice here strong control although the tests do not get down to the leaves
-  expect_lt(res7["false_error"], .05 + sim_err)
+  ## Multiple possibilities:
+  lapply(res_t_half_ok_fwer[, .SD, .SDcols = parm_nms], table)
 
-  ## Now, look at the kind of alpha spending/investing idea -- moderate increase in power
-  ## reduce tree size for speed
-  set.seed(123456)
-  res8 <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 3, max_level = 3,
-    alpha = 0.05, N_total = 10000000, beta_base = 0.1, adj_effN = TRUE,
-    local_adj_p_fn = local_hommel_all_ps,
-    global_adj = "hommel", return_details = FALSE, alpha_method = "spending"
-  )
-  res8
-  ## Notice here strong control although the tests do not get down to the leaves
-  expect_lt(res8["false_error"], .05 + sim_err)
-  # expect_gt(res8["power"], res7["power"])
+  ## Which have the highest power?
+  res_t_half_ok_fwer[order(power, decreasing = TRUE), .SD, .SDcols = c("power", "leaf_power", "bottom_up_power", parm_nms)]
 
-  ### Now look at the alpha investing approach --- no real difference
-  set.seed(123456)
-  res9 <- simulate_many_runs_DT(
-    n_sim = 1000, t = .5, k = 3, max_level = 3,
-    alpha = 0.05, N_total = 10000000, beta_base = 0.1, adj_effN = TRUE,
-    local_adj_p_fn = local_hommel_all_ps,
-    global_adj = "hommel", return_details = FALSE, alpha_method = "investing"
-  )
-  res9
-  ## Notice here strong control although the tests do not get down to the leaves
-  expect_lt(res9["false_error"], .05 + sim_err)
+  ## What among those without a final adjustment method?
+
+  res_t_half_ok_fwer[final_adj_method == "none", ][order(power, decreasing = TRUE), .SD, .SDcols = c("power", "leaf_power", parm_nms)]
+
+  ## And without any local adjustment but with an adaptive alpha adjustment
+
+  res_t_half_ok_fwer[final_adj_method == "none" & local_adj_method ==
+    "local_unadj_all_ps", ][order(power, decreasing = TRUE), .SD,
+    .SDcols =
+      c("power", "leaf_power", "num_leaves_tested", "num_leaves", parm_nms)
+  ]
+
+  res_t_some_ok_fwer[final_adj_method == "none" & local_adj_method ==
+    "local_unadj_all_ps", ][order(power, decreasing = TRUE), .SD,
+    .SDcols =
+      c("power", "leaf_power", "num_leaves_tested", "num_leaves", parm_nms)
+  ]
+
+  ## This suggests:
+  ## (1) you can avoid local_adj_methods across all children if you use the adaptive_k_adj and sample splitting.
+  ## (2) with no final global adjustment, you can have power with TODO
+
+  ## TODO: choose the best ideas for the broader sim to look at changes with k and l and t
 })
 
 
