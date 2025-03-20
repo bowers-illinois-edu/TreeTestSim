@@ -8,20 +8,11 @@ cran-comments.md
 ^revdep$
 # unit tests & related material that we don't care to share w/ CRAN
 tests/testthat/test.notforCRAN.R
-tests/testthat/test.tidiers.R
-tests/testthat/res1nodes.pdf
-tests/testthat/res3nodes.pdf
-tests/profiling_code.R
-tests/profile_distfns.R
-tests/profile_plots.R
-tests/dpp_junk.R
-tests/dpp_test.R
 tests/*.Rout.save
 ^.*\.Rproj$
 ^\.Rproj\.user$
 .lintr
 src/README.md
-tests/testthat/JUNK
 README.md
 .vscode
 ^\.github$

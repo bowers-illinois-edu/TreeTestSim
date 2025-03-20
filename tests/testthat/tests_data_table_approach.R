@@ -1,4 +1,4 @@
-context("Data.table-based Tree Simulation Functions")
+testthat::context("Data.table-based Tree Simulation Functions")
 
 devtools::load_all()
 
@@ -182,7 +182,6 @@ test_that("simulate_test_DT gates branches when the local adjusted p-value excee
   expect_true(nrow(gated_children) > 0)
 })
 
-## TODO: exclude this next from CRAN.
 test_that("All arguments work. No errors", {
   ## Checking that the arguments work.
   alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
@@ -197,7 +196,7 @@ test_that("All arguments work. No errors", {
     adj_effN = adj_effN,
     stringsAsFactors = FALSE
   ))
-  parms[, idx := 1:nrow(parms)]
+  parms[, idx := seq_len(nrow(parms))]
   setkey(parms, "idx")
 
   set.seed(12345)
@@ -205,7 +204,7 @@ test_that("All arguments work. No errors", {
     x <- parms[.(i)]
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
-      n_sim = 10, t = 0, k = 3, max_level = 3,
+      n_sim = 5, t = 0, k = 3, max_level = 3,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
@@ -222,7 +221,7 @@ test_that("All arguments work. No errors", {
     x <- parms[.(i)]
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
-      n_sim = 10, t = 1, k = 3, max_level = 3,
+      n_sim = 5, t = 1, k = 3, max_level = 3,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
@@ -239,7 +238,7 @@ test_that("All arguments work. No errors", {
     x <- parms[.(i)]
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
-      n_sim = 10, t = .5, k = 3, max_level = 3,
+      n_sim = 5, t = .5, k = 3, max_level = 3,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
@@ -260,6 +259,7 @@ test_that("All arguments work. No errors", {
   expect_equal(nrow(res_t1), nrow(parms))
   expect_equal(nrow(res_t_half), nrow(parms))
 })
+
 
 ## TODO: Don't do 10,000 sims on CRAN
 

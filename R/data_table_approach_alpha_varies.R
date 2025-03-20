@@ -199,7 +199,9 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
     tree_sim[nonnull == TRUE & !is.na(p_val), alpha_alloc])
   power <- mean(tree_sim[nonnull == TRUE & !is.na(p_val), p_val] <=
     tree_sim[nonnull == TRUE & !is.na(p_val), alpha_alloc])
-  num_leaves_tested <- sum(tree_sim[level == max_level & !is.na(p_val)])
+  ## This is a test
+  num_leaves_tested <- sum(tree_sim[level == max_level, !is.na(p_val)])
+  stopifnot(num_leaves_tested <= num_leaves)
   if (num_leaves_tested > 0) {
     leaf_power <- mean(tree_sim[level == max_level & nonnull == TRUE & !is.na(p_val), p_val] <= alpha, na.rm = TRUE)
     leaf_disc <- sum(tree_sim[level == max_level & nonnull == TRUE & !is.na(p_val), p_val] <= alpha, na.rm = TRUE)
