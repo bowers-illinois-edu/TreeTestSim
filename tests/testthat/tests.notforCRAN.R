@@ -26,7 +26,7 @@ test_that("simulating many p-values does what we expect", {
 
   alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
   final_adj_methods <- c("none", "fdr", "fwer")
-  local_adj_methods <- c("local_simes", "local_hommel_all_ps", "local_unadj_all_ps")
+  local_adj_methods <- c("local_simes", "local_hommel_all_ps", "local_unadj_all_ps", "local_bh_all_ps")
   adj_effN <- c(TRUE, FALSE)
 
   parms <- as.data.table(expand.grid(
@@ -189,10 +189,12 @@ test_that("simulating many p-values does what we expect", {
     filter(final_adj_method == "none" & alpha_method == "fixed") %>%
     dplyr::select(one_of(c("power", "leaf_power", "false_error", parm_nms))) %>%
     arrange(desc(power), false_error)
+
   ##       power leaf_power false_error alpha_method final_adj_method    local_adj_method adj_effN
   ##       <num>      <num>       <num>       <char>           <char>              <char>   <lgcl>
-  ## 1: 0.7450000  1.0000000       0.022        fixed             none local_hommel_all_ps     TRUE
-  ## 2: 0.6121262  0.7121212       0.065        fixed             none         local_simes     TRUE
+  ## 1: 0.7460000  1.0000000       0.048        fixed             none     local_bh_all_ps     TRUE
+  ## 2: 0.7370000  1.0000000       0.023        fixed             none local_hommel_all_ps     TRUE
+  ## 3: 0.5926397  0.7560976       0.068        fixed             none         local_simes     TRUE
 
   ## What among those without a final adjustment method but with a varying alpha and a version of sample splitting
   ## local_simes is clearly worst so exclude here
@@ -200,22 +202,28 @@ test_that("simulating many p-values does what we expect", {
     filter(final_adj_method == "none" & alpha_method != "fixed" & adj_effN & local_adj_method != "local_simes") %>%
     dplyr::select(one_of(c("power", "leaf_power", "false_error", parm_nms))) %>%
     arrange(desc(power), false_error)
+
   ##   power leaf_power false_error   alpha_method final_adj_method    local_adj_method adj_effN
   ##   <num>      <num>       <num>         <char>           <char>              <char>   <lgcl>
-  ## 1: 0.771  0.7285714       0.056      investing             none local_hommel_all_ps     TRUE
-  ## 2: 0.744  0.7941176       0.046       spending             none local_hommel_all_ps     TRUE
-  ## 3: 0.733  1.0000000       0.022    fixed_k_adj             none local_hommel_all_ps     TRUE
-  ## 4: 0.732  0.9795918       0.047 adaptive_k_adj             none  local_unadj_all_ps     TRUE
-  ## 5: 0.729  1.0000000       0.004 adaptive_k_adj             none local_hommel_all_ps     TRUE
+  ## 1: 0.787  0.8048780       0.051      investing             none local_hommel_all_ps     TRUE
+  ## 2: 0.761  1.0000000       0.005 adaptive_k_adj             none local_hommel_all_ps     TRUE
+  ## 3: 0.756  1.0000000       0.041    fixed_k_adj             none local_hommel_all_ps     TRUE
+  ## 4: 0.746  0.7571429       0.044       spending             none local_hommel_all_ps     TRUE
+  ## 5: 0.734  1.0000000       0.011 adaptive_k_adj             none     local_bh_all_ps     TRUE
+  ## 6: 0.734  1.0000000       0.052 adaptive_k_adj             none  local_unadj_all_ps     TRUE
+  ## 7: 0.729  1.0000000       0.043    fixed_k_adj             none     local_bh_all_ps     TRUE
+  ## 8: 0.726  0.6634615       0.075      investing             none     local_bh_all_ps     TRUE
+  ## 9: 0.720  0.8375000       0.076       spending             none     local_bh_all_ps     TRUE
 
-  ## So, worth exploring all alpha_methods, final_adj_methods, and local_hommel
-  ## and local_unadj. Maybe also explore both with and without data splitting
-  ## (idea is that one might imaging testing components of an index --- say an
-  ## inde x with 10 variables in it. So we are not data splitting.)
+  ## So, worth exploring all alpha_methods, final_adj_methods, and
+  ## local_hommel, and local_bh, and local_unadj. Maybe also explore both with
+  ## and without data splitting (idea is that one might imaging testing
+  ## components of an index --- say an inde x with 10 variables in it. So we
+  ## are not data splitting.)
 
   ## Compare to a situation with more k and more opportunities for ungating (t=.5)
 
-  thek <- 10
+  thek <- 8
   thel <- 4
 
   n_nodes_2 <- ((thek^(thel + 1)) - 1) / (thek - 1)

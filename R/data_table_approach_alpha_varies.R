@@ -82,7 +82,9 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
   if (global_adj == "hommel") {
     global_adj_fn <- local_hommel_all_ps
   } else {
-    global_adj_fn <- function(x) p.adjust(x, method = global_adj)
+    global_adj_fn <- function(x) {
+      p.adjust(x, method = global_adj)
+    }
   }
   tree_sim[level == max_level, bottom_up_p_adj := global_adj_fn(p_sim)]
   bottom_up_false_error <- any(tree_sim[level == max_level & nonnull == FALSE, bottom_up_p_adj] <= alpha)
@@ -417,7 +419,7 @@ local_simes <- function(pvals_children, alpha = .05) {
 #'
 #' @importFrom hommel hommel
 #' @export
-local_hommel_all_ps <- function(pvals_children, alpha = .05) {
+local_hommel_all_ps <- function(pvals_children, alpha = alpha) {
   adj_p_vals <- hommel(pvals_children)@adjusted
   return(adj_p_vals)
 }
@@ -463,4 +465,69 @@ local_min_p <- function(pvals_children, alpha = .05) {
 #' @export
 local_unadj_all_ps <- function(pvals_children, alpha = .05) {
   pvals_children
+}
+
+
+#' @title Compute local BH FDR adjusted p-value for a Vector of Child p-values
+#'
+#' @description Given \eqn{k} child p-values, computes the BH/FDR adjusted p-values
+#'
+#' @param pvals_children Numeric vector of child p-values.
+#' @param alpha Numeric scalar of alpha (not used in this function)
+#'
+#' @details TODO
+#'
+#' @return A vector of adjusted p-values
+#'
+#' @examples
+#' local_bh_ps(c(0.01, 0.04, 0.10, 0.20))
+#'
+#' @importFrom hommel hommel
+#' @export
+local_bh_all_ps <- function(pvals_children, alpha = alpha) {
+  adj_p_vals <- p.adjust(pvals_children, method = "BH")
+  return(adj_p_vals)
+}
+
+
+#' Sample from a Scaled Beta Distribution
+#'
+#' This function generates random samples from a Beta distribution and then linearly transforms
+#' the samples so that they lie in the interval \eqn{[a, 1]}, where \eqn{a} is a user-defined minimum.
+#'
+#' @param a Numeric. The lower bound of the output interval. Must be between 0 (inclusive) and 1 (exclusive).
+#' @param shape1 Numeric. The first shape parameter of the Beta distribution.
+#' @param shape2 Numeric. The second shape parameter of the Beta distribution.
+#' @param n Integer. The number of random samples to generate (default is 1).
+#'
+#' @return A numeric vector containing \eqn{n} samples that have been scaled to lie in the interval \eqn{[a, 1]}.
+#'
+#' @details The function first generates \eqn{n} samples from a standard Beta distribution on the interval \eqn{[0, 1]}
+#' using \code{rbeta(n, shape1, shape2)}. It then performs a linear transformation of the form:
+#' \deqn{x = a + (1 - a) \times \text{beta_sample}}
+#' so that when \code{beta_sample} equals 0, the transformed value is \eqn{a}, and when \code{beta_sample} equals 1,
+#' the output is 1.
+#'
+#' @examples
+#' # Generate 10 samples with a lower bound of 0.2, and Beta parameters shape1 = 2 and shape2 = 5:
+#' samples <- r_scaled_beta(0.2, 2, 5, n = 10)
+#' print(samples)
+#'
+#' @export
+r_scaled_beta <- function(a, shape1, shape2, n = 1) {
+  # Ensure 'a' is a numeric value within the interval [0, 1).
+  if (!is.numeric(a) || a < 0 || a >= 1) {
+    stop("Parameter 'a' must be numeric and in the interval [0, 1).")
+  }
+
+  # Generate 'n' samples from the standard Beta distribution on [0, 1].
+  beta_samples <- rbeta(n, shape1, shape2)
+
+  # Linearly transform the Beta samples to the interval [a, 1].
+  # The transformation is: scaled_sample = a + (1 - a) * beta_sample.
+  # When beta_sample = 0, scaled_sample = a, and when beta_sample = 1, scaled_sample = 1.
+  scaled_samples <- a + (1 - a) * beta_samples
+
+  # Return the transformed samples.
+  return(scaled_samples)
 }

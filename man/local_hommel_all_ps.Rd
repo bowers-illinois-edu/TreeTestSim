@@ -4,7 +4,7 @@
 \alias{local_hommel_all_ps}
 \title{Compute local Hommel p-value for a Vector of Child p-values}
 \usage{
-local_hommel_all_ps(pvals_children, alpha = 0.05)
+local_hommel_all_ps(pvals_children, alpha = alpha)
 }
 \arguments{
 \item{pvals_children}{Numeric vector of child p-values.}
