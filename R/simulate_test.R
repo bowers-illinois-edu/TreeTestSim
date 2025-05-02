@@ -44,6 +44,7 @@
 #'   alpha = 0.05, k = 3, effN = 1000, N_total = 1000,
 #'   beta_base = 0.1, alpha_method = "spending", return_details = TRUE
 #' )
+#' @import data.table
 #' @export
 simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
                              adj_effN = TRUE, local_adj_p_fn = local_simes, global_adj = "hommel",

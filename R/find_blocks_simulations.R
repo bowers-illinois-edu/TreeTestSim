@@ -8,18 +8,21 @@
 #'
 #' @param idat Unit-level data. An object inheriting from class data.table
 #' @param bdat Block-level data. An object inheriting from class data.table
-#' @param pfn  A function to  produce p-values (see [pWilcox] for example).
-#' @param splitfn A function for splitting the data, see [splitLOO] for example.
+#' @param pfn  A function to  produce p-values (see [manytestsr::pWilcox] for example).
+#' @param splitfn A function for splitting the data, see [manytestsr::splitLOO] for example.
 #' @param fmla A formula relating outcomes  to  treatment and blocks (to  be passed to  pfn).
 #' @param blockid A character name of the column in idat and bdat indicating the block.
-#' @param trtvar Is the name of the treatment numeric, (0,1), variable
+#' @param trtvar Is the name of the treatment numeric, \eqn{(0,1)}, variable
 #' @param ybase Is the potential outcome to control upon which the treatment effect will be built
 #' @param afn A function to adjust alpha at each step. Takes one or more p-values plus a stratum or batch indicator.
 #' @param thealpha The alpha level of the test.
-#' @param tau_fn Is a function that turns ybase into the potential outcome under treatment --- it is a treatment effect creating function.
+#' @param tau_fn Is a function that turns ybase into the potential outcome
+#' under treatment --- it is a treatment effect creating function.
 #' @param tau_size Is the parameter for the tau_fn --- like the true average effect size within a block.
 #' @param prop_blocks_0 The proportion of blocks having no treatment effect at all.
-#' @param sims Is the number of simulations to run --- each simulation uses the same treatment effects be re-assigns treatment (re-shuffles treatment and re-reveals the observed outcomes as a function of the potential outcomes)
+#' @param sims Is the number of simulations to run --- each simulation uses the
+#' same treatment effects be re-assigns treatment (re-shuffles treatment and
+#' re-reveals the observed outcomes as a function of the potential outcomes)
 #' @return A data.table with final pvalues, the associated blocks,  the true treatment effects, and the order in which the tests were conducted.
 #' @importFrom manytestsr find_blocks
 #' @export
