@@ -14,7 +14,7 @@
 #'
 #' @param max_level Integer. The maximum level of the tree (with the root at level 0).
 #' @param k Integer. The branching factor (each internal node has exactly \code{k} children).
-#' @param t Numeric in [0,1]. The probability that a leaf is non-null (has a treatment effect).
+#' @param t Numeric in \eqn{[0,1]}. The probability that a leaf is non-null (has a treatment effect).
 #'
 #' @return A data.table with columns \code{node}, \code{level}, \code{parent}, and \code{nonnull}.
 #' @export

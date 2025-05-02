@@ -11,7 +11,7 @@ generate_tree_DT(max_level, k, t)
 
 \item{k}{Integer. The branching factor (each internal node has exactly \code{k} children).}
 
-\item{t}{Numeric in \link{0,1}. The probability that a leaf is non-null (has a treatment effect).}
+\item{t}{Numeric in \eqn{[0,1]}. The probability that a leaf is non-null (has a treatment effect).}
 }
 \value{
 A data.table with columns \code{node}, \code{level}, \code{parent}, and \code{nonnull}.

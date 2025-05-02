@@ -118,12 +118,18 @@ create_effects <- function(idat, ybase, blockid, tau_fn, tau_size, covariate = N
 
 #' Causal Effect Functions
 #'
-#' These functions create individual level causal effects, tau_i, that can be combined with a potential outcome to control to create a potential outcome to treatment.
+#' These functions create individual level causal effects, \eqn{\tau_i}, that can be
+#' combined with a potential outcome to control to create a potential outcome
+#' to treatment.
+#'
 #' @param ybase Is a vector of potential outcome to control
 #' @param tau_sds is the number of sds of ybase to shift the distribution
-#' @param covariate Contains information about covariates currently a character name of a column in idat. It is NULL if not used. Mostly it is a vector the same length as ybase.
-#' @return A vector of individual level causal effects (taus) that we will add to ybase (potential outcome to control) to get y1var or potential outcome to treatment.
-
+#' @param covariate Contains information about covariates currently a character
+#' name of a column in idat. It is NULL if not used. Mostly it is a vector the
+#' same length as ybase.
+#' @return A vector of individual level causal effects (taus) that we will add
+#' to ybase (potential outcome to control) to get y1var or potential outcome to
+#' treatment.
 #' @describeIn Tau_Functions A basic function with no outliers
 #' @export
 tau_norm <- function(ybase, tau_sds, covariate) {

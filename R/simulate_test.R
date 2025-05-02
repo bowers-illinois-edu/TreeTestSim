@@ -194,4 +194,3 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
     return(sim_res)
   }
 }
-

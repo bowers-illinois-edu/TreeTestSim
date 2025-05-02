@@ -2,7 +2,7 @@
 #'
 #' @description
 #' Generates random samples from a Beta distribution and then linearly transforms
-#' them to lie in the interval [a, 1].
+#' them to lie in the interval \eqn{[a, 1]}.
 #'
 #' @param a Numeric. The lower bound of the output interval. Must be between 0 and 1 (exclusive).
 #' @param shape1 Numeric. The first shape parameter of the Beta distribution.
