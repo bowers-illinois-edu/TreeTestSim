@@ -25,7 +25,7 @@ simulate_many_runs_DT(
 \arguments{
 \item{n_sim}{Integer. The number of simulation replicates.}
 
-\item{t}{Numeric in \link{0,1}. The probability that a leaf is non-null.}
+\item{t}{Numeric in \eqn{[0,1]}. The probability that a leaf is non-null.}
 
 \item{k}{Integer. The branching factor.}
 

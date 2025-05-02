@@ -20,7 +20,7 @@ A numeric vector of length n containing the transformed samples.
 }
 \description{
 Generates random samples from a Beta distribution and then linearly transforms
-them to lie in the interval \link{a, 1}.
+them to lie in the interval \eqn{[a, 1]}.
 }
 \examples{
 r_scaled_beta(0.2, 2, 5, n = 10)
