@@ -21,6 +21,7 @@
 #' @param prop_blocks_0 The proportion of blocks having no treatment effect at all.
 #' @param sims Is the number of simulations to run --- each simulation uses the same treatment effects be re-assigns treatment (re-shuffles treatment and re-reveals the observed outcomes as a function of the potential outcomes)
 #' @return A data.table with final pvalues, the associated blocks,  the true treatment effects, and the order in which the tests were conducted.
+#' @importFrom manytestsr find_blocks
 #' @export
 errsimfn <- function(idat, bdat, pfn, splitfn,
                      fmla = Y ~ newtrtF | blockF,
@@ -36,7 +37,6 @@ errsimfn <- function(idat, bdat, pfn, splitfn,
       afn <- get(afn)
     }
   }
-  # require(data.table) # not necessary now that we have  a package
   idatnew <- copy(idat) # to avoid updating the bdat and idat inputs outside of the function
   bdatnew <- copy(bdat)
   setkeyv(bdatnew, blockid)
@@ -50,7 +50,7 @@ errsimfn <- function(idat, bdat, pfn, splitfn,
     mndiffb = mean(Y[get(trtvar) == "1"]) - mean(Y[get(trtvar) == "0"])
   ), by = blockid]
   stopifnot(key(tausb) == blockid)
-  res <- findBlocks(
+  res <- find_blocks(
     idat = idatnew, bdat = bdatnew, pfn = pfn, alphafn = afn, splitfn = splitfn, thealpha = thealpha,
     fmla = fmla, parallel = "no", blockid = blockid, sims = sims
   )
@@ -108,7 +108,7 @@ create_effects <- function(idat, ybase, blockid, tau_fn, tau_size, covariate = N
   blocks <- sort(as.character(unique(idatnew[[blockid]])))
   num_blocks <- length(blocks)
   n_null_blocks <- round(num_blocks * prop_blocks_0)
-  if (prop_blocks_0 > 0 & n_null_blocks >= 1) {
+  if (prop_blocks_0 > 0 && n_null_blocks >= 1) {
     null_blocks <- sort(as.character(sample(blocks, size = n_null_blocks)))
     idatnew[.(null_blocks), y1sim := get(ybase)]
   }

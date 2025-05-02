@@ -1,16 +1,19 @@
 Package: TreeTestsSim
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
+Authors@R:
+    person("Jake", "Bowers", , "jake@jakebowers.org", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
 Suggests:
     testthat (>= 2.1.0),
-    here (>= 1.0.1)
+    here (>= 1.0.1),
 Depends:
     R (>= 3.5.0),
     data.table (>= 1.12.0),
     hommel (>= 1.8.0),
+    manytestsr (>= 0.0.2),
+Remotes:
+    bowers-illinois-edu/manytestsr
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
