@@ -198,3 +198,9 @@ tau_norm_covariate_levels <- function(ybase, tau_sds, covariate) {
   }), covariate)
   return(thetau)
 }
+
+#' @describeIn Tau_Functions Represent the no effects situation
+#' @export
+tau_null <- function(ybase, tau_sds, covariate) {
+  return(rep(0, length(ybase)))
+}

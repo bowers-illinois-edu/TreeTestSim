@@ -7,6 +7,7 @@
 \alias{tau_norm_covariate_outliers}
 \alias{tau_norm_covariate_cont}
 \alias{tau_norm_covariate_levels}
+\alias{tau_null}
 \title{Causal Effect Functions}
 \usage{
 tau_norm(ybase, tau_sds, covariate)
@@ -20,6 +21,8 @@ tau_norm_covariate_outliers(ybase, tau_sds, covariate)
 tau_norm_covariate_cont(ybase, tau_sds, covariate)
 
 tau_norm_covariate_levels(ybase, tau_sds, covariate)
+
+tau_null(ybase, tau_sds, covariate)
 }
 \arguments{
 \item{ybase}{Is a vector of potential outcome to control}
@@ -53,5 +56,7 @@ to treatment.
 \item \code{tau_norm_covariate_cont()}: A basic function that specifies a tau_sds size effect if cov>median(cov) and otherwise is a tau_sds/4 size effect
 
 \item \code{tau_norm_covariate_levels()}: A basic function that specifies a tau_sds size effect that varies, randomly, by level of covariate. We envision this to be used with covariate that have relatively few levels into which the outcome values can be grouped.
+
+\item \code{tau_null()}: Represent the no effects situation
 
 }}
