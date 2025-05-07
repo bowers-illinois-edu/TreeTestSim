@@ -25,6 +25,7 @@
 #' @param covariate is the name of a covariate to be used in created covariate dependent treatment effects. If NULL then the tau_fn should not use a covariate. If "newcov", then create a new covariate with a known (moderate) relationship with the potential outcome under control. This relationship is currently fixed with an R^2 of about .1.
 #' @param splitby A string indicating which column in bdat contains a variable to guide splitting (for example, a column with block sizes or block harmonic mean weights or a column with a covariate (or a function of covariates))
 #' @param thealpha Is the error rate for a given test (for cases where alphafn is NULL, or the starting alpha for alphafn not null)
+#' @param blocksize The character name of the column that measures the block size.
 #' @param stop_splitby_constant TRUE is the algorithm should stop splitting when the splitting criteria is constant within set/parent or whether it should continue but split randomly.
 #' @param return_details TRUE means that the function should return a list of
 #' the original data ("detobj"), a summary of the results ("detresults"), and a
@@ -34,7 +35,7 @@
 #' @export
 padj_test_fn <- function(idat, bdat, blockid, trtid = "trt", fmla = Y ~ trtF | blockF, ybase,
                          prop_blocks_0, tau_fn, tau_size, by_block = TRUE, pfn, afn, p_adj_method, nsims, ncores = 1,
-                         splitfn = NULL, covariate = NULL, splitby = NULL, thealpha = .05,
+                         splitfn = NULL, covariate = NULL, splitby = NULL, thealpha = .05, blocksize = "hwt",
                          stop_splitby_constant = TRUE, return_details = FALSE) {
   if (!is.null(afn) & is.character(afn)) {
     if (afn == "NULL") {
@@ -89,11 +90,13 @@ padj_test_fn <- function(idat, bdat, blockid, trtid = "trt", fmla = Y ~ trtF | b
   }
 
   p_sims_lst <- replicate(nsims, reveal_and_test_fn(
-    idat = datnew, bdat = bdatnew, blockid = blockid, trtid = trtid, y1var = "y1new",
-    fmla = fmla, ybase = ybase, prop_blocks_0 = prop_blocks_0,
-    tau_fn = tau_fn, tau_size = tau_size, pfn = pfn, afn = afn, p_adj_method = p_adj_method,
-    splitfn = splitfn, splitby = splitby, thealpha = thealpha,
-    stop_splitby_constant = stop_splitby_constant, ncores = ncores, return_details = return_details
+    idat = datnew, bdat =
+      bdatnew, blockid = blockid, trtid = trtid, y1var = "y1new", fmla = fmla,
+    ybase = ybase, prop_blocks_0 = prop_blocks_0, tau_fn = tau_fn, tau_size =
+      tau_size, pfn = pfn, afn = afn, p_adj_method = p_adj_method, splitfn =
+      splitfn, splitby = splitby, thealpha = thealpha, stop_splitby_constant =
+      stop_splitby_constant, ncores = ncores, return_details = return_details,
+    blocksize = blocksize
   ), simplify = FALSE)
 
   if (length(p_sims_lst) == 1) {

@@ -24,6 +24,7 @@ padj_test_fn(
   covariate = NULL,
   splitby = NULL,
   thealpha = 0.05,
+  blocksize = "hwt",
   stop_splitby_constant = TRUE,
   return_details = FALSE
 )
@@ -67,6 +68,8 @@ where treatment assignment and block must be factors.}
 \item{splitby}{A string indicating which column in bdat contains a variable to guide splitting (for example, a column with block sizes or block harmonic mean weights or a column with a covariate (or a function of covariates))}
 
 \item{thealpha}{Is the error rate for a given test (for cases where alphafn is NULL, or the starting alpha for alphafn not null)}
+
+\item{blocksize}{The character name of the column that measures the block size.}
 
 \item{stop_splitby_constant}{TRUE is the algorithm should stop splitting when the splitting criteria is constant within set/parent or whether it should continue but split randomly.}
 
