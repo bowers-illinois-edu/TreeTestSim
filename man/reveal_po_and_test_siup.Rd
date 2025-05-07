@@ -24,6 +24,7 @@ reveal_po_and_test_siup(
   thealpha = 0.05,
   stop_splitby_constant = TRUE,
   ncores = 1,
+  blocksize = "hwt",
   return_details = FALSE
 )
 }
@@ -65,6 +66,8 @@ reveal_po_and_test_siup(
 \item{stop_splitby_constant}{TRUE is the algorithm should stop splitting when the splitting criteria is constant within set/parent or whether it should continue but split randomly.}
 
 \item{ncores}{The number of cores or threads to use for the test statistic creation and possible permutation testing}
+
+\item{blocksize}{The character name of the column that measures the block size.}
 
 \item{return_details}{TRUE means that the function should return a list of
 the original data ("detobj"), a summary of the results ("detresults"), and a

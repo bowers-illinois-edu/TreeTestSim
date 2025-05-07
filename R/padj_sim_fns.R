@@ -199,6 +199,7 @@ reveal_po_and_test <- function(idat, bdat, blockid, trtid, fmla = NULL, ybase, y
 #' @param thealpha Is the error rate for a given test (for cases where alphafn is NULL, or the starting alpha for alphafn not null)
 #' @param stop_splitby_constant TRUE is the algorithm should stop splitting when the splitting criteria is constant within set/parent or whether it should continue but split randomly.
 #' @param ncores The number of cores or threads to use for the test statistic creation and possible permutation testing
+#' @param blocksize The character name of the column that measures the block size.
 #' @param return_details TRUE means that the function should return a list of
 #' the original data ("detobj"), a summary of the results ("detresults"), and a
 #' node level dataset  ("detnodes"). Default here is FALSE. Only use TRUE when
@@ -207,7 +208,8 @@ reveal_po_and_test <- function(idat, bdat, blockid, trtid, fmla = NULL, ybase, y
 #' @export
 reveal_po_and_test_siup <- function(idat, bdat, blockid, trtid, fmla = Y ~ newZF | blockF, ybase, y1var,
                                     prop_blocks_0, tau_fn, tau_size, pfn, afn, p_adj_method = "split",
-                                    copydts = FALSE, splitfn, splitby, thealpha = .05, stop_splitby_constant = TRUE, ncores = 1, return_details = FALSE) {
+                                    copydts = FALSE, splitfn, splitby, thealpha = .05, stop_splitby_constant = TRUE, ncores = 1,
+                                    blocksize = "hwt", return_details = FALSE) {
   if (!is.null(afn) & is.character(afn)) {
     if (afn == "NULL") {
       afn <- NULL
@@ -233,10 +235,11 @@ reveal_po_and_test_siup <- function(idat, bdat, blockid, trtid, fmla = Y ~ newZF
   # idat[, Y := get(y1var) * get(trtid) + get(ybase) * (1 - get(trtid))] # reveal relevant potential outcomes with possible known effect
 
   res <- find_blocks(
-    idat = idat, bdat = bdat, blockid = blockid, splitfn = splitfn,
-    pfn = pfn, alphafn = afn, thealpha = thealpha,
-    fmla = fmla,
-    parallel = parallel, ncores = ncores, copydts = copydts, splitby = splitby, stop_splitby_constant = stop_splitby_constant
+    idat = idat, bdat = bdat, blockid = blockid, splitfn =
+      splitfn, pfn = pfn, alphafn = afn, thealpha = thealpha, fmla = fmla,
+    parallel = parallel, ncores = ncores, copydts = copydts, splitby = splitby,
+    blocksize = blocksize,
+    stop_splitby_constant = stop_splitby_constant
   )
 
   errs <- calc_errs(
