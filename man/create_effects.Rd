@@ -12,7 +12,8 @@ create_effects(
   tau_size,
   covariate = NULL,
   prop_blocks_0 = 0,
-  by_block = TRUE
+  by_block = TRUE,
+  non_null_blocks = NULL
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ create_effects(
 \item{prop_blocks_0}{The proportion of blocks having zero treatment effect.}
 
 \item{by_block}{TRUE if each block has a separate shift (like a mean shift) or to otherwise create the individual level treatment effect separately within block or FALSE to create the effect across all blocks (ignoring blocks).}
+
+\item{non_null_blocks}{Is the name of a column indicating whether a given block contains a non-zero effect.}
 }
 \value{
 A data.table with a single column containing potential outcome to treatment.

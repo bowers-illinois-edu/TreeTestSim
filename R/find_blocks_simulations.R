@@ -79,11 +79,13 @@ errsimfn <- function(idat, bdat, pfn, splitfn,
 #' @param covariate Contains information about covariates currently a character name of a column in idat. It is NULL if not used.
 #' @param prop_blocks_0 The proportion of blocks having zero treatment effect.
 #' @param by_block TRUE if each block has a separate shift (like a mean shift) or to otherwise create the individual level treatment effect separately within block or FALSE to create the effect across all blocks (ignoring blocks).
+#' @param non_null_blocks Is the name of a column indicating whether a given block contains a non-zero effect.
 #' @return A data.table with a single column containing potential outcome to treatment.
 #' @export
-create_effects <- function(idat, ybase, blockid, tau_fn, tau_size, covariate = NULL, prop_blocks_0 = 0, by_block = TRUE) {
-  if (!is.null(covariate) & is.character(covariate)) {
-    if (covariate == "" | covariate == "NULL") {
+create_effects <- function(idat, ybase, blockid, tau_fn, tau_size, covariate = NULL, prop_blocks_0 = 0,
+                           by_block = TRUE, non_null_blocks = NULL) {
+  if (!is.null(covariate) && is.character(covariate)) {
+    if (covariate == "" || covariate == "NULL") {
       covariate <- NULL
     }
   }
@@ -107,13 +109,17 @@ create_effects <- function(idat, ybase, blockid, tau_fn, tau_size, covariate = N
     }
   }
 
-  ## Choose blocks at random to set to zero
-  blocks <- sort(as.character(unique(idatnew[[blockid]])))
-  num_blocks <- length(blocks)
-  n_null_blocks <- round(num_blocks * prop_blocks_0)
-  if (prop_blocks_0 > 0 && n_null_blocks >= 1) {
-    null_blocks <- sort(as.character(sample(blocks, size = n_null_blocks)))
-    idatnew[.(null_blocks), y1sim := get(ybase)]
+  if (is.null(non_null_blocks)) {
+    ## Choose blocks at random to set to zero
+    blocks <- sort(as.character(unique(idatnew[[blockid]])))
+    num_blocks <- length(blocks)
+    n_null_blocks <- round(num_blocks * prop_blocks_0)
+    if (prop_blocks_0 > 0 && n_null_blocks >= 1) {
+      null_blocks <- sort(as.character(sample(blocks, size = n_null_blocks)))
+      idatnew[.(null_blocks), y1sim := get(ybase)]
+    }
+  } else {
+    idatnew[.(get(non_null_blocks) == FALSE), y1sim := get(ybase)]
   }
   return(idatnew$y1sim)
 }
