@@ -260,19 +260,32 @@ reveal_po_and_test_siup <- function(idat, bdat, blockid, trtid, fmla = Y ~ newZF
 #' Calculate the error and success proportions of tests for a single iteration
 #'
 #' @description
-#' This function takes output from [manytestsr::find_blocks] or an equivalent bottom-up testing function such as `adjust_block_tests`
-#' and returns the proportions of errors made. To use this function the input to find_blocks must include a column containing a true block-level effect.
-#' Repeated uses of this function allow us to assess false discovery rates and family wise error rates among other metrics of testing success.
+
+#' This function takes output from [manytestsr::find_blocks] or an equivalent
+#' bottom-up testing function such as `adjust_block_tests` and returns the
+#' proportions of errors made. To use this function the input to find_blocks
+#' must include a column containing a true block-level effect. Repeated uses of
+#' this function allow us to assess false discovery rates and family wise error
+#' rates among other metrics of testing success.
 #'
-#' @param testobj Is an object arising from [manytestsr::find_blocks] or [adjust_block_tests]. It will contain block-level results.
-#' @param truevar_name Is a string indicating the name of the variable containing the true underlying causal effect (at the block level).
-#' @param trueeffect_tol Is the smallest effect size below which we consider the effect to be zero (by default is it floating point zero).
+#' @param testobj Is an object arising from [manytestsr::find_blocks] or
+#' [adjust_block_tests]. It will contain block-level results.
+#' @param truevar_name Is a string indicating the name of the variable
+#' containing the true underlying causal effect (at the block level).
+#' @param trueeffect_tol Is the smallest effect size below which we consider
+#' the effect to be zero (by default is it floating point zero).
 #' @param blockid A character name of the column in idat and bdat indicating the block.
-#' @param thealpha Is the error rate for a given test (for cases where alphafn is NULL, or the starting alpha for alphafn not null)
-#' @param fwer Indicates that we are trying to control FWER. Right now, we do this by default in report_detections but this indicates when we should be looking at FDR
-#' @param return_details TRUE means that the function should return a list of the original data ("detobj"), a summary of the results ("detresults"),  a
-#' node level dataset  ("detnodes"), and a copy of the original object that was provided as input. Default here is FALSE. Only use TRUE when
-#' not using simulations.
+#' @param thealpha Is the error rate for a given test (for cases where alphafn
+#' is NULL, or the starting alpha for alphafn not null)
+#' @param fwer Indicates that we are trying to control FWER. Right now, we do
+#' this by default in report_detections but this indicates when we should be
+#' looking at FDR
+#' @param return_details TRUE means that the function should return a list of
+#' the original data ("detobj"), a summary of the results ("detresults"),  a
+#' node level dataset  ("detnodes"), and a copy of the original object that was
+#' provided as input. Default here is FALSE. Only use TRUE when not using
+#' simulations.
+
 #'
 #' @returns
 

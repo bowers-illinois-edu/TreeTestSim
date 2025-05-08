@@ -119,7 +119,7 @@ create_effects <- function(idat, ybase, blockid, tau_fn, tau_size, covariate = N
       idatnew[.(null_blocks), y1sim := get(ybase)]
     }
   } else {
-    idatnew[.(get(non_null_blocks) == FALSE), y1sim := get(ybase)]
+    idatnew[get(non_null_blocks) == FALSE, y1sim := get(ybase)]
   }
   return(idatnew$y1sim)
 }
