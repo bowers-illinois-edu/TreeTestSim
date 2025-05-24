@@ -17,9 +17,11 @@ padj_test_fn(
   by_block = TRUE,
   pfn,
   afn,
+  local_adj_p_fn,
   p_adj_method,
   nsims,
   ncores = 1,
+  ncores_sim = 1,
   splitfn = NULL,
   covariate = NULL,
   splitby = NULL,
@@ -55,11 +57,15 @@ where treatment assignment and block must be factors.}
 
 \item{afn}{A function to adjust alpha at each step. Takes one or more p-values plus a stratum or batch indicator.}
 
+\item{local_adj_p_fn}{A function used to adjust p-values at each step (the p-values of the children of a given parent.)}
+
 \item{p_adj_method}{Is "split" to use \link[manytestsr:find_blocks]{manytestsr::find_blocks} for top-down testing and "fdr" or "holm" etc to use \link[stats:p.adjust]{stats::p.adjust} and do the test in every block.}
 
 \item{nsims}{Is the number of simulations to run --- each simulation uses the same treatment effects be re-assigns treatment (re-shuffles treatment and re-reveals the observed outcomes as a function of the potential outcomes)}
 
 \item{ncores}{Tells p-value functions how many cores to use. Mostly ignored in use of this function because we are tending to parallelize at higher loops.}
+
+\item{ncores_sim}{Number of cores used to repeat the simulation. \code{ncores} should be 1 if this is more than one.}
 
 \item{splitfn}{A function to split the data into two pieces --- using bdat}
 
