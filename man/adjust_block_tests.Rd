@@ -7,7 +7,7 @@
 adjust_block_tests(
   idat,
   bdat,
-  blockid = "block",
+  blockid,
   pfn,
   p_adj_method = "fdr",
   simthresh = 20,
@@ -15,7 +15,7 @@ adjust_block_tests(
   fmla = YContNorm ~ trtF,
   parallel = "multicore",
   ncores = 4,
-  copydts = FALSE
+  copydts = TRUE
 )
 }
 \arguments{
@@ -29,20 +29,31 @@ adjust_block_tests(
 
 \item{p_adj_method}{A string indicating which method \code{p.adjust} should use. Default is "fdr".}
 
-\item{simthresh}{Below which number of total observations should the p-value functions use permutations rather than asymptotic approximations}
+\item{simthresh}{Below which number of total observations should the p-value
+functions use permutations rather than asymptotic approximations}
 
-\item{sims}{Number of permutations for permutation-based testing when the total number of cases is below the threshold.}
+\item{sims}{Number of permutations for permutation-based testing when the
+total number of cases is below the threshold.}
 
-\item{fmla}{A formula with \verb{outcome~treatment assignment | block} where treatment assignment and block must be factors. The tests will run within each block so that \verb{|block} part is not strictly important.}
+\item{fmla}{A formula with \verb{outcome~treatment assignment | block} where
+treatment assignment and block must be factors. The tests will run within
+each block so that \verb{|block} part is not strictly important.}
 
-\item{parallel}{Should the pfn use multicore processing for permutation based testing? Default is no. But could be "snow" or "multicore" following \code{approximate} in the coin package.}
+\item{parallel}{Should the pfn use multicore processing for permutation
+based testing? Default is no. But could be "snow" or "multicore" following
+\code{approximate} in the coin package.}
 
 \item{ncores}{The number of cores to use in the p-value creation function}
 
-\item{copydts}{TRUE or FALSE. TRUE if using standalone. Could be FALSE if copied objects are being sent to this function from other functions. Basically the question is whether we want this function to change the block or individual level datasets in the main environment or return a new object.}
+\item{copydts}{TRUE or FALSE. TRUE if using standalone. Could be FALSE if
+copied objects are being sent to this function from other functions.
+Basically the question is whether we want this function to change the block
+or individual level datasets in the main environment or return a new object.}
 }
 \value{
-A data.table containing information about the sequence tests. The column \code{max_p} is the adjusted p-value and the column \code{p} is the unadjusted p-value.
+A data.table containing information about the sequence tests. The
+column \code{max_p} is the adjusted p-value and the column \code{p} is the unadjusted
+p-value.
 }
 \description{
 This function tests a hypothesis (of no effects currently) within each and

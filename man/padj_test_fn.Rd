@@ -22,13 +22,15 @@ padj_test_fn(
   nsims,
   ncores = 1,
   ncores_sim = 1,
+  bottom_up_adj,
   splitfn = NULL,
   covariate = NULL,
   splitby = NULL,
   thealpha = 0.05,
   blocksize = "hwt",
   stop_splitby_constant = TRUE,
-  return_details = FALSE
+  return_details = FALSE,
+  return_bottom_up = TRUE
 )
 }
 \arguments{
@@ -47,37 +49,64 @@ where treatment assignment and block must be factors.}
 
 \item{prop_blocks_0}{Is the proportion of blocks with no effects at all}
 
-\item{tau_fn}{Is a function that turns ybase into the potential outcome under treatment --- it is a treatment effect creating function.}
+\item{tau_fn}{Is a function that turns ybase into the potential outcome
+under treatment --- it is a treatment effect creating function.}
 
-\item{tau_size}{Is the parameter for the tau_fn --- like the true average effect size within a block.}
+\item{tau_size}{Is the parameter for the tau_fn --- like the true average
+effect size within a block.}
 
-\item{by_block}{Is an argument to \link{create_effects} to create true effects by block or across the whole dataset}
+\item{by_block}{Is an argument to \link{create_effects} to create true effects by
+block or across the whole dataset}
 
 \item{pfn}{A function to produce pvalues --- using idat.}
 
-\item{afn}{A function to adjust alpha at each step. Takes one or more p-values plus a stratum or batch indicator.}
+\item{afn}{A function to adjust alpha at each step. Takes one or more
+p-values plus a stratum or batch indicator.}
 
-\item{local_adj_p_fn}{A function used to adjust p-values at each step (the p-values of the children of a given parent.)}
+\item{local_adj_p_fn}{A function used to adjust p-values at each step (the
+p-values of the children of a given parent.)}
 
-\item{p_adj_method}{Is "split" to use \link[manytestsr:find_blocks]{manytestsr::find_blocks} for top-down testing and "fdr" or "holm" etc to use \link[stats:p.adjust]{stats::p.adjust} and do the test in every block.}
+\item{p_adj_method}{Is "split" to use \link[manytestsr:find_blocks]{manytestsr::find_blocks} for top-down
+testing and "fdr" or "holm" etc to use \link[stats:p.adjust]{stats::p.adjust} and do the test in
+every block.}
 
-\item{nsims}{Is the number of simulations to run --- each simulation uses the same treatment effects be re-assigns treatment (re-shuffles treatment and re-reveals the observed outcomes as a function of the potential outcomes)}
+\item{nsims}{Is the number of simulations to run --- each simulation uses
+the same treatment effects be re-assigns treatment (re-shuffles treatment
+and re-reveals the observed outcomes as a function of the potential
+outcomes)}
 
-\item{ncores}{Tells p-value functions how many cores to use. Mostly ignored in use of this function because we are tending to parallelize at higher loops.}
+\item{ncores}{Tells p-value functions how many cores to use. Mostly ignored
+in use of this function because we are tending to parallelize at higher
+loops.}
 
-\item{ncores_sim}{Number of cores used to repeat the simulation. \code{ncores} should be 1 if this is more than one.}
+\item{ncores_sim}{Number of cores used to repeat the simulation.
+\code{ncores} should be 1 if this is more than one.}
+
+\item{bottom_up_adj}{Is a string for the \code{p.adjust} function such as
+"hommel" or "fdr". When doing simulations where \code{p_adj_method} include such
+approaches, care is needed.(TODO fix this)}
 
 \item{splitfn}{A function to split the data into two pieces --- using bdat}
 
-\item{covariate}{is the name of a covariate to be used in created covariate dependent treatment effects. If NULL then the tau_fn should not use a covariate. If "newcov", then create a new covariate with a known (moderate) relationship with the potential outcome under control. This relationship is currently fixed with an R^2 of about .1.}
+\item{covariate}{is the name of a covariate to be used in created covariate
+dependent treatment effects. If NULL then the tau_fn should not use a
+covariate. If "newcov", then create a new covariate with a known (moderate)
+relationship with the potential outcome under control. This relationship is
+currently fixed with an R^2 of about .1.}
 
-\item{splitby}{A string indicating which column in bdat contains a variable to guide splitting (for example, a column with block sizes or block harmonic mean weights or a column with a covariate (or a function of covariates))}
+\item{splitby}{A string indicating which column in bdat contains a variable
+to guide splitting (for example, a column with block sizes or block harmonic
+mean weights or a column with a covariate (or a function of covariates))}
 
-\item{thealpha}{Is the error rate for a given test (for cases where alphafn is NULL, or the starting alpha for alphafn not null)}
+\item{thealpha}{Is the error rate for a given test (for cases where alphafn
+is NULL, or the starting alpha for alphafn not null)}
 
-\item{blocksize}{The character name of the column that measures the block size.}
+\item{blocksize}{The character name of the column that measures the block
+size.}
 
-\item{stop_splitby_constant}{TRUE is the algorithm should stop splitting when the splitting criteria is constant within set/parent or whether it should continue but split randomly.}
+\item{stop_splitby_constant}{TRUE is the algorithm should stop splitting
+when the splitting criteria is constant within set/parent or whether it
+should continue but split randomly.}
 
 \item{return_details}{TRUE means that the function should return a list of
 the original data ("detobj"), a summary of the results ("detresults"), and a

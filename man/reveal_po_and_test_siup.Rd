@@ -25,8 +25,11 @@ reveal_po_and_test_siup(
   thealpha = 0.05,
   stop_splitby_constant = TRUE,
   ncores = 1,
+  truevar_name = "nonnull",
   blocksize = "hwt",
-  return_details = FALSE
+  return_details = FALSE,
+  return_bottom_up = TRUE,
+  bottom_up_adj
 )
 }
 \arguments{
@@ -38,7 +41,8 @@ reveal_po_and_test_siup(
 
 \item{trtid}{Is the name of the treatment numeric, (0,1), variable}
 
-\item{fmla}{A formula with outcome~treatment assignment  | block where treatment assignment and block must be factors. (NOT USED HERE)}
+\item{fmla}{A formula with outcome~treatment assignment  | block where
+treatment assignment and block must be factors. (NOT USED HERE)}
 
 \item{ybase}{Is the potential outcome to control upon which the treatment effect will be built}
 
@@ -46,7 +50,8 @@ reveal_po_and_test_siup(
 
 \item{prop_blocks_0}{Is the proportion of blocks with no effects at all}
 
-\item{tau_fn}{Is a function that turns ybase into the potential outcome under treatment --- it is a treatment effect creating function.}
+\item{tau_fn}{Is a function that turns ybase into the potential outcome
+under treatment --- it is a treatment effect creating function.}
 
 \item{tau_size}{Is the parameter for the tau_fn --- like the true average effect size within a block.}
 
@@ -56,15 +61,21 @@ reveal_po_and_test_siup(
 
 \item{p_adj_method}{Must be "split" here.}
 
-\item{copydts}{TRUE or FALSE. TRUE if using find_blocks standalone. FALSE if copied objects are being sent to find_blocks from other functions.}
+\item{copydts}{TRUE or FALSE. TRUE if using find_blocks standalone. FALSE if
+copied objects are being sent to find_blocks from other functions.}
 
 \item{splitfn}{A function to split the data into two pieces --- using bdat}
 
-\item{splitby}{A string indicating which column in bdat contains a variable to guide splitting (for example, a column with block sizes or block harmonic mean weights or a column with a covariate (or a function of covariates))}
+\item{splitby}{A string indicating which column in bdat contains a variable
+to guide splitting (for example, a column with block sizes or block harmonic
+mean weights or a column with a covariate (or a function of covariates))}
 
-\item{thealpha}{Is the error rate for a given test (for cases where alphafn is NULL, or the starting alpha for alphafn not null)}
+\item{thealpha}{Is the error rate for a given test (for cases where alphafn
+is NULL, or the starting alpha for alphafn not null)}
 
-\item{stop_splitby_constant}{TRUE is the algorithm should stop splitting when the splitting criteria is constant within set/parent or whether it should continue but split randomly.}
+\item{stop_splitby_constant}{TRUE is the algorithm should stop splitting
+when the splitting criteria is constant within set/parent or whether it
+should continue but split randomly.}
 
 \item{ncores}{The number of cores or threads to use for the test statistic creation and possible permutation testing}
 
@@ -76,8 +87,17 @@ node level dataset  ("detnodes"). Default here is FALSE. Only use TRUE when
 not using simulations.}
 }
 \value{
-False positive proportion out of the tests across the blocks, The false discovery rate (proportion rejected of false nulls out of all rejections), the power of the adjusted tests across blocks (the proportion of correctly rejected hypotheses out of all correct hypotheses --- in this case correct means non-null), and power of the unadjusted test (proportion correctly rejected out of  all correct hypothesis, but using unadjusted p-values).
+False positive proportion out of the tests across the blocks, The
+false discovery rate (proportion rejected of false nulls out of all
+rejections), the power of the adjusted tests across blocks (the proportion
+of correctly rejected hypotheses out of all correct hypotheses --- in this
+case correct means non-null), and power of the unadjusted test (proportion
+correctly rejected out of  all correct hypothesis, but using unadjusted
+p-values).
 }
 \description{
-The function does hypothesis tests within partitions of blocks (including individual blocks depending on the splitting algorithm) and then summarizes the results  of this testing across the blocks. It very much depends  on padj_test_fn.
+The function does hypothesis tests within partitions of blocks (including
+individual blocks depending on the splitting algorithm) and then summarizes
+the results  of this testing across the blocks. It very much depends  on
+padj_test_fn.
 }

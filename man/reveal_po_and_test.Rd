@@ -24,7 +24,11 @@ reveal_po_and_test(
   copydts = FALSE,
   stop_splitby_constant = FALSE,
   ncores = 1,
-  return_details = FALSE
+  return_details = FALSE,
+  local_adj_p_fn,
+  return_bottom_up,
+  blocksize,
+  bottom_up_adj
 )
 }
 \arguments{
@@ -44,7 +48,8 @@ reveal_po_and_test(
 
 \item{prop_blocks_0}{Is the proportion of blocks with no effects at all}
 
-\item{tau_fn}{Is a function that turns ybase into the potential outcome under treatment --- it is a treatment effect creating function.}
+\item{tau_fn}{Is a function that turns ybase into the potential outcome
+under treatment --- it is a treatment effect creating function.}
 
 \item{tau_size}{Is the parameter for the tau_fn --- like the true average effect size within a block.}
 
@@ -54,15 +59,23 @@ reveal_po_and_test(
 
 \item{afn}{NULL. Not used. Included here to enable same functions to call this function and reveal_po_and_test_siup}
 
-\item{splitfn}{Must be null. Only exists so that we can use the same efffect creation and testing function for both approaches.}
+\item{splitfn}{Must be null. Only exists so that we can use the same efffect
+creation and testing function for both approaches.}
 
-\item{splitby}{Must be null. Only exists so that we can use the same efffect creation and testing function for both approaches.}
+\item{splitby}{Must be null. Only exists so that we can use the same efffect
+creation and testing function for both approaches.}
 
-\item{thealpha}{Is the error rate for a given test (for cases where alphafn is NULL, or the starting alpha for alphafn not null)}
+\item{thealpha}{Is the error rate for a given test (for cases where alphafn
+is NULL, or the starting alpha for alphafn not null)}
 
-\item{copydts}{TRUE or FALSE. TRUE if using \link[manytestsr:find_blocks]{manytestsr::find_blocks} standalone. FALSE if copied objects are being sent to find_blocks from other functions.}
+\item{copydts}{TRUE or FALSE. TRUE if using \link[manytestsr:find_blocks]{manytestsr::find_blocks}
+standalone. FALSE if copied objects are being sent to find_blocks from other
+functions.}
 
-\item{stop_splitby_constant}{FALSE (not used here because this algorithm does not split) is the algorithm should stop splitting when the splitting criteria is constant within set/parent or whether it should continue but split randomly.}
+\item{stop_splitby_constant}{FALSE (not used here because this algorithm
+does not split) is the algorithm should stop splitting when the splitting
+criteria is constant within set/parent or whether it should continue but
+split randomly.}
 
 \item{ncores}{The number of cores or threads to use for the test statistic creation and possible permutation testing}
 
@@ -72,8 +85,16 @@ node level dataset  ("detnodes"). Default here is FALSE. Only use TRUE when
 not using simulations.}
 }
 \value{
-False positive proportion out of the tests across the blocks, The false discovery rate (proportion rejected of false nulls out of all rejections), the power of the adjusted tests across blocks (the proportion of correctly rejected hypotheses out of all correct hypotheses --- in this case correct means non-null), and power of the unadjusted test (proportion correctly rejected out of  all correct hypothesis, but using unadjusted p-values).
+False positive proportion out of the tests across the blocks, The
+false discovery rate (proportion rejected of false nulls out of all
+rejections), the power of the adjusted tests across blocks (the proportion
+of correctly rejected hypotheses out of all correct hypotheses --- in this
+case correct means non-null), and power of the unadjusted test (proportion
+correctly rejected out of  all correct hypothesis, but using unadjusted
+p-values).
 }
 \description{
-The function does hypothesis tests within blocks and then summarizes the results  of this testing across the blocks. It is designed for use by padj_test_fn.
+The function does hypothesis tests within blocks and then summarizes the
+results  of this testing across the blocks. It is designed for use by
+padj_test_fn.
 }
