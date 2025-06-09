@@ -83,8 +83,8 @@
 #' @export
 padj_test_fn <- function(idat, bdat, blockid, trtid = "trt", fmla = Y ~ trtF | blockF, ybase,
                          prop_blocks_0, tau_fn, tau_size, by_block = TRUE,
-                         pfn, afn, local_adj_p_fn, p_adj_method, nsims, ncores = 1,
-                         ncores_sim = 1, bottom_up_adj,
+                         pfn, afn, local_adj_p_fn = local_unadj_all_ps, p_adj_method, nsims, ncores = 1,
+                         ncores_sim = 1, bottom_up_adj = "hommel",
                          splitfn = NULL, covariate = NULL, splitby = NULL, thealpha = .05, blocksize = "hwt",
                          stop_splitby_constant = TRUE, return_details = FALSE, return_bottom_up = TRUE) {
   if (!is.null(afn) & is.character(afn)) {
@@ -148,7 +148,7 @@ padj_test_fn <- function(idat, bdat, blockid, trtid = "trt", fmla = Y ~ trtF | b
         local_adj_p_fn = local_adj_p_fn, p_adj_method = p_adj_method,
         splitfn = splitfn, splitby = splitby, thealpha = thealpha,
         stop_splitby_constant = stop_splitby_constant, ncores = ncores, return_details = return_details,
-        return_bottom_up = return_bottom_up,
+        return_bottom_up = return_bottom_up, bottom_up_adj = bottom_up_adj,
         blocksize = blocksize
       )
     }, mc.cores = ncores_sim)
