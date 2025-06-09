@@ -82,7 +82,6 @@ calc_errs <- function(testobj,
     list(min(x, na.rm = TRUE), mean(x, na.rm = TRUE), median(x, na.rm = TRUE), max(x, na.rm = TRUE))
   }
 
-
   if (!any(grepl("max_p", names(testobj)))) {
     # this is for the top-down/split and test method
     detobj <- report_detections(testobj, fwer = fwer, alpha = thealpha, only_hits = FALSE)
@@ -237,7 +236,7 @@ calc_errs_new <- function(testobj,
     list(min(x, na.rm = TRUE), mean(x, na.rm = TRUE), median(x, na.rm = TRUE), max(x, na.rm = TRUE))
   }
 
-  if (length(grep("biggrp", names(testobj))) > 0) {
+  if (!any(grepl("max_p", names(testobj)))) {
     ## Do both node and leaf level calculations here
     res <- make_results_tree(testobj,
       block_id = blockid,
@@ -280,12 +279,13 @@ calc_errs_new <- function(testobj,
     num_nonnull_leaves_tested <- sum(!is.na(res$max_p) & res$nonnull)
 
     if (num_leaves_tested > 0) {
-      leaf_power <- res[nonnull == TRUE & !is.na(max_p), mean(max_p <= a, na.rm = TRUE)]
-      leaf_rejections <- res[!is.na(max_p), sum(max_p <= a, na.rm = TRUE)]
-      leaf_true_discoveries <- res[nonnull == TRUE & !is.na(max_p), sum(max_p <= a, na.rm = TRUE)]
-      leaf_any_false_rejection <- res[nonnull == FALSE & !is.na(max_p), any(max_p <= a)]
-      leaf_false_rejection_prop <- res[nonnull == FALSE & !is.na(max_p), mean(max_p <= a)]
-      leaf_false_discovery_prop <- res[nonnull == FALSE & !is.na(max_p), sum(max_p <= a) / max(1, leaf_rejections)]
+      ## I think that !is.na(max_p) is not necessary here since we test all the leaves/blocks
+      leaf_power <- res[nonnull == TRUE, mean(max_p <= a)]
+      leaf_rejections <- res[, sum(max_p <= a)]
+      leaf_true_discoveries <- res[nonnull == TRUE, sum(max_p <= a)]
+      leaf_any_false_rejection <- res[nonnull == FALSE, any(max_p <= a)]
+      leaf_false_rejection_prop <- res[nonnull == FALSE, mean(max_p <= a)]
+      leaf_false_discovery_prop <- res[nonnull == FALSE, sum(max_p <= a) / max(1, leaf_rejections)]
     } else {
       leaf_power <- NA
       leaf_rejections <- NA

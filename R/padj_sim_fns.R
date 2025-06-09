@@ -412,7 +412,7 @@ reveal_po_and_test_siup <- function(idat, bdat, blockid, trtid, fmla = Y ~ newZF
   }
   if (!return_details && return_bottom_up) {
     names(errs_bottom_up) <- paste0("bot_", names(errs_bottom_up))
-    results <- cbind(errs_tree = errs_tree, errs_bottom_up = errs_bottom_up)
+    results <- cbind(errs_tree, errs_bottom_up)
     return(results)
   }
   if (return_details && return_bottom_up) {
