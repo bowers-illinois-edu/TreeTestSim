@@ -394,13 +394,14 @@ reveal_po_and_test_siup <- function(idat, bdat, blockid, trtid, fmla = Y ~ newZF
 
   res_tree <- make_results_tree(orig_res = res$bdat, block_id = blockid, truevar_name = truevar_name)
 
-  errs_tree <- calc_errs_new(
-    testobj = res$bdat,
-    truevar_name = "trueate",
-    trueeffect_tol = .Machine$double.eps,
-    blockid = blockid,
-    return_details = return_details
-  )
+  ## errs_tree <- calc_errs_new(
+  ##  testobj = res$bdat,
+  ##  truevar_name = "trueate",
+  ##  trueeffect_tol = .Machine$double.eps,
+  ##  blockid = blockid,
+  ##  return_details = return_details
+  ## )
+  errs_tree <- res_tree$test_summary
 
   if (return_details && !return_bottom_up) {
     results <- list(tree = res_tree, res = res)

@@ -83,7 +83,7 @@ calc_errs <- function(testobj,
   }
 
 
-  if (length(grep("biggrp", names(testobj))) > 0) {
+  if (!any(grepl("max_p", names(testobj)))) {
     # this is for the top-down/split and test method
     detobj <- report_detections(testobj, fwer = fwer, alpha = thealpha, only_hits = FALSE)
     ## This records both group hits and hits in individual blocks
