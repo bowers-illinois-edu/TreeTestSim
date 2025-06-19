@@ -65,6 +65,23 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
   max_level <- max(tree_sim$level)
 
   # Bottom-up approach for comparison
+
+  ### TODO: So we should set minimum power for each leaf (like the power you'd
+  ### get with N_total/(k^max_level))
+  ## And then maxpower at the overall test which is a function of
+  ## pbeta(.05,a,1). Say, we set overall power at pbeta(alpha,a,1) choosing an
+  ## a such that this equals .8, then we ask, say, what the N would have to be
+  ## for this for a t-test maybe??? Basically, we can have minimum power (say,
+  ## imagine relatively large leaves, say N=50, with 25 treated and 25
+  ## controls, so pbeta(.05,a,1)==blah where blah is the power of a t.test like
+  ## power.t.test()). For example, power.t.test(delta=.8,sd=1,sig.level=.05,n=25) -> power=.8
+  ## imagine for the sake of these simulations that no block has fewer than that.
+  ## So we get num_leaves*(25*2) as the total size of the N in the dataset. And this determines the top level power.
+  ## At each split we divide the N_node/k -> convert to t.test power
+  ## Effect at each node is the size weighted average of the block averages of that block (for delta, assume sd=1).
+
+
+
   effN_leaves <- N_total / (k^max_level)
   beta_eff_leaves_raw <- beta_base * sqrt(N_total / effN_leaves)
   cap_leaves <- 0.5
