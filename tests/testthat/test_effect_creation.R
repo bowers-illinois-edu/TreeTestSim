@@ -1,9 +1,10 @@
 # Test and develop functions to create treatment effects in simulations
-context("Treatment Effect Simulations")
 
 ## The next lines are for use when creating the tests. Change interactive<-FALSE for production
 interactive <- FALSE
 if (interactive) {
+  library(testthat)
+  local_edition(3)
   library(here)
   library(data.table)
   library(devtools)

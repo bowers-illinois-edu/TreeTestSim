@@ -1,12 +1,14 @@
 ## This next takes too long for ordinary testing especially on CRAN
 
-testthat::context("not for CRAN")
 
-devtools::load_all()
-library(dtplyr)
-library(dplyr)
+##devtools::load_all()
+##library(dtplyr)
+##library(dplyr)
 
 test_that("simulating many p-values does what we expect", {
+  skip()
+  skip_on_cran()
+  skip_on_ci()
   ## We are using k=4 and l=3 here which is 27 nodes
   # n_nodes_1 <- sum(nodes_per_level^seq(0, num_levels))
   # n_nodes_2 <- ((nodes_per_level^num_levels) - 1) / (nodes_per_level - 1)

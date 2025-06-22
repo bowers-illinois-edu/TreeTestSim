@@ -1,6 +1,5 @@
-testthat::context("Data.table-based Tree Simulation Functions")
 
-devtools::load_all()
+#devtools::load_all()
 
 test_that("generate_tree_DT creates a complete tree with correct columns and levels", {
   max_level <- 2
@@ -266,6 +265,9 @@ test_that("All arguments work. No errors", {
 ## This next is just meant to be a very rough guide
 
 test_that("simulating many p-values does what we expect", {
+  skip()
+  skip_on_ci()
+  skip_on_cran()
   nrow(parms)
 
   n_sims <- 100

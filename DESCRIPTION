@@ -1,9 +1,9 @@
 Package: TreeTestsSim
-Title: What the Package Does (One Line, Title Case)
+Title: Enables simulation of hypothesis tests on tree-like structures
 Version: 0.0.0.9000
 Authors@R:
     person("Jake", "Bowers", , "jake@jakebowers.org", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: This package helps researchers study hypothesis testing procedures when those hypotheses are organized in a tree-like structure. It has functions to generate k-ary trees with known proportions of leaves and nodes have non-zero or zero effects, enables the creation of simulated block or strata randomized experimental designs that can be organized in a nested tree-like format, and has helper functions which can be run to explore the impact of different analytic decisions on the outcomes of the testing.
 Suggests:
     testthat (>= 2.1.0),
     here (>= 1.0.1),
@@ -19,3 +19,4 @@ License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+Config/testthat/edition: 3

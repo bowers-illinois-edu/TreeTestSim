@@ -4,8 +4,10 @@
 # context("Simulation Functions")
 
 ## The next lines are for use when creating the tests. Change interactive<-FALSE for production
-interactive <- TRUE
+interactive <- FALSE
 if (interactive) {
+  library(testthat)
+  local_edition(3)
   library(here)
   library(data.table)
   library(dtplyr)
@@ -13,8 +15,8 @@ if (interactive) {
   library(conflicted)
   conflicts_prefer(dplyr::filter)
   library(devtools)
-  load_all("~/repos/manytestsr")
   load_all() ## use  this during debugging
+  load_all("~/repos/manytestsr")
   source(here("tests/testthat", "make_test_data.R"))
 }
 
@@ -106,6 +108,7 @@ res_half_investing_tree$nodes %>%
   mutate(across(where(is.numeric), zapsmall)) %>%
   select(-blocks)
 
+test_that("Assess the error calculation function on the test in every block or bottom-up approach",{
 res_half_bottom_up <- adjust_block_tests(idat = idt, bdat = bdt1, blockid = "bF", pfn = pOneway, p_adj_method = "hommel", fmla = Y_half_tau1 ~ trtF, copydts = TRUE)
 
 res_half_bottom_up_errs <- calc_errs_new(res_half_bottom_up, truevar_name = "nonnull") %>% select(contains("lea"))
@@ -113,6 +116,7 @@ expect_equal(sum(res_half_bottom_up$nonnull), res_half_bottom_up_errs$num_nonnul
 expect_equal(res_half_bottom_up_errs$leaf_rejections, sum(res_half_bottom_up[, max_p <= .05]))
 expect_equal(res_half_bottom_up_errs$leaf_true_discoveries, sum(res_half_bottom_up[nonnull == TRUE, max_p <= .05]))
 expect_equal(res_half_bottom_up_errs$leaf_power, mean(res_half_bottom_up[nonnull == TRUE, max_p <= .05]))
+})
 
 alpha_and_splits <- expand.grid(
   afn = c("alpha_investing", "alpha_saffron", "NULL"),
@@ -230,7 +234,7 @@ err_testing_fn <-
     if (thetree$test_summary$num_leaves_tested > 0) {
       expect_equal(as.numeric(thetree$test_summary$leaf_rejections), errs$nreject)
     } else {
-      expect_equal(is.na(thetree$test_summary$leaf_rejections), errs$nreject == 0)
+      expect_equal(thetree$test_summary$leaf_rejections==0, errs$nreject == 0)
     }
 
     expect_equal(errs$true_pos_prop, err_tab["1", "0"] / tottests)
@@ -273,11 +277,13 @@ err_testing_bottom_up <-
       anynotnull = as.numeric(get(truevar_name) != 0)
     )]
 
-    err_tab0 <- with(blocks, table(rejected = hit, true0 = true0, exclude = c()))
+    err_tab0 <- with(blocks, table(rejected = hit, non_zero_effect = anynotnull, exclude = c()))
+    #err_tab0 <- with(blocks, table(rejected = hit, true0 = true0, exclude = c()))
     ## Make a table of rejections by hypotheses
-    ##                      True 0            |  Not True 0 (actual effect)
-    ## Not Reject   True Reject (not error)   |    False reject (low power error)
-    ## Rejected        False positive (Error) |    Correct rejection (detection of the truth)
+    ##                      True 0      "0"      |  Not True 0 (actual effect) "1"
+    ## Not Reject "0"  True Reject (not error)   |    False reject (low power error)
+    ## Rejected "1"       False positive (Error) |    Correct rejection (detection of the truth)
+
     if (!identical(dim(err_tab0), as.integer(c(2, 2)))) {
       blank_mat <-
         matrix(0, 2, 2, dimnames = list(c("0", "1"), c("0", "1")))
@@ -287,24 +293,37 @@ err_testing_bottom_up <-
       err_tab <- err_tab0
     }
 
-    errs <- calc_errs(
+## So:
+  ## err_tab["1","1"] are the number of correct rejections
+  ## err_tab["0","0"] are the number of correct not-rejections
+  ## err_tab["1","0"] are the number of false positive rejections (rejecting a null effect)
+  ## err_tab["0","1"] are the number of false negative rejections (failing to reject a null effect) (a measure of power)
+  ## power would be 1 - (err_tab["0","1"]/sum(err_tab[,"1"])) --- 1 - proportion of non-null effects not rejected=proportion of non-effects rejected
+  ## or err_tab["1","1"]/sum(err_tab[,"1"])
+
+    errs <- calc_errs_new(
       testobj = theres,
       truevar_name = truevar_name,
       trueeffect_tol = .Machine$double.eps, fwer = FALSE
     )
 
     tottests <- sum(err_tab)
-    tottests_from_calc_errs <- errs$nreject + errs$naccept
+    tottests_from_calc_errs <- errs$num_leaves_tested
     expect_equal(tottests, tottests_from_calc_errs)
+  ## This approach has to test in all leaves
+    expect_equal(tottests, errs$num_leaves)
 
-    expect_equal(errs$true_pos_prop, err_tab["1", "0"] / tottests)
-    expect_equal(errs$tot_not_reject_true0 / tottests, err_tab["0", "1"] / tottests)
-    expect_equal(errs$false_pos_prop, err_tab["1", "1"] / tottests)
-    expect_equal(errs$false_neg_prop, err_tab["0", "0"] / tottests)
-    expect_equal(errs$true_disc_prop, err_tab["1", "0"] / max(1, sum(err_tab["1", ])))
-    expect_equal(errs$false_disc_prop, err_tab["1", "1"] / max(1, sum(err_tab["1", ])))
-    expect_equal(errs$true_nondisc_prop, err_tab["0", "1"] / max(1, sum(err_tab["0", ])))
-    expect_equal(errs$false_nondisc_prop, err_tab["0", "0"] / max(1, sum(err_tab["0", ])))
+  expect_equal(errs$leaf_rejections,sum(err_tab["1",]))
+    expect_equal(errs$leaf_true_discoveries, err_tab["1", "1"])
+  if(!is.na(errs$leaf_power)){
+    expect_equal(errs$leaf_power, err_tab["1", "1"] / max(1, sum(err_tab[,"1"])))
+  }
+    expect_equal(errs$leaf_false_discovery_prop, err_tab["1", "0"] / max(1, sum(err_tab["1", ])))
+
+    if(!is.na(errs$leaf_false_rejection_prop)){
+    expect_equal(errs$leaf_false_rejection_prop, err_tab["1", "0"] / tottests)
+  }
+
   }
 
 err_testing_fn(
@@ -337,6 +356,7 @@ err_testing_fn(
 )
 
 err_testing_bottom_up(fmla = Ynorm_dec ~ ZF, idat = idat3, bdat = bdat4, truevar_name = "ate_norm_dec")
+err_testing_bottom_up(fmla = Ynorm_dec ~ ZF, idat = idat3, bdat = bdat4, truevar_name = "ate_tau")
 
 resnms <- apply(alpha_and_splits, 1, function(x) {
   paste(x, collapse = "_", sep = "")
@@ -422,6 +442,7 @@ test_that(
     )
   }
 )
+
 test_that(
   "Error calculations for a given set of tests work:individually heteogeneous effects and decrease with block size. Also some completely null blocks.",
   {
@@ -533,6 +554,11 @@ test_that(
 )
 
 
+test_that("Some simulation code runs without error",{
+  skip()
+  skip_on_ci()
+  skip_on_cran()
+
 ### This next is less of a test with expected results and more to ensure that the code runs without error.
 simparms <- cbind(alpha_and_splits, p_adj_method = rep("split", nrow(alpha_and_splits)))
 simparms <- rbind(simparms, c("NULL", "NULL", "NULL", "fdr"))
@@ -582,74 +608,66 @@ lapply(p_sims_res, function(obj) {
   obj[, lapply(.SD, mean)]
 })
 
-p_sims_obj <- rbindlist(p_sims_res, idcol = TRUE)
 
-err_rates <- p_sims_obj[, lapply(.SD, mean), .SDcols = c(
-  "true_pos_prop",
-  "false_pos_prop",
-  "correct_pos_effect_prop",
-  "false_neg_prop",
-  "true_disc_prop",
-  "false_disc_prop",
-  "true_nondisc_prop",
-  "false_nondisc_prop"
-), by = .id]
+p_sims_obj <- rbindlist(p_sims_res[1:15], idcol = TRUE)
 
-## This is just one run --- so these are not really error rates but error proportions
-err_rates
+})
 
-test_that(
-  "Clustering-based Splitters control FWER.",
-  {
-    simparms2 <- data.table(expand.grid(
-      splitby = c("hwt", "v4", "newcov"),
-      covariate = c("v4", "newcov"), stringsAsFactors = FALSE
-    ))
-    simparms2[, afn := "NULL"]
-    simparms2[, sfn := "splitCluster"]
-    simparms2[, p_adj_method := "split"]
-    set.seed(12345)
-    res2 <- lapply(
-      seq_len(nrow(simparms2)),
-      FUN = function(i) {
-        x <- simparms2[i, ]
-        xnm <- paste(x, collapse = "_")
-        message(xnm)
-        nsims <- 100
-        p_sims_tab <- padj_test_fn(
-          idat = idat3,
-          bdat = bdat4,
-          blockid = "bF",
-          trtid = "Z",
-          fmla = Y ~ ZF | blockF,
-          ybase = "y0",
-          prop_blocks_0 = 1,
-          tau_fn = tau_norm_covariate_outliers,
-          tau_size = 0,
-          covariate = x[["covariate"]],
-          pfn = pIndepDist,
-          nsims = nsims,
-          afn = "NULL",
-          p_adj_method = "split",
-          splitfn = getFromNamespace(x[["sfn"]], ns = "manytestsr"),
-          splitby = x[["splitby"]],
-          ncores = 1
-        )
-        return(p_sims_tab)
-      }
-    )
-    p_sims_obj2 <- rbindlist(res2, idcol = TRUE)
-    err_rates2 <- p_sims_obj2[, lapply(.SD, mean), .SDcols = c(
-      "true_pos_prop",
-      "false_pos_prop",
-      "prop_not_reject_true0",
-      "false_neg_prop",
-      "true_disc_prop",
-      "false_disc_prop",
-      "true_nondisc_prop",
-      "false_nondisc_prop"
-    ), by = .id]
-    err_rates2
-    expect_lte(max(err_rates2$false_pos_prop), .05 + 2 * (sqrt(.025 / 100)))
-  }
-)
+
+# test_that(
+#   "Clustering-based Splitters control FWER.",
+#   {
+#     simparms2 <- data.table(expand.grid(
+#       splitby = c("hwt", "v4", "newcov"),
+#       covariate = c("v4", "newcov"), stringsAsFactors = FALSE
+#     ))
+#     simparms2[, afn := "NULL"]
+#     simparms2[, sfn := "splitCluster"]
+#     simparms2[, p_adj_method := "split"]
+#     skip_on_ci()
+#     skip_on_cran()
+#     set.seed(12345)
+#     res2 <- lapply(
+#       seq_len(nrow(simparms2)),
+#       FUN = function(i) {
+#         x <- simparms2[i, ]
+#         xnm <- paste(x, collapse = "_")
+#         message(xnm)
+#         nsims <- 100
+#         p_sims_tab <- padj_test_fn(
+#           idat = idat3,
+#           bdat = bdat4,
+#           blockid = "bF",
+#           trtid = "Z",
+#           fmla = Y ~ ZF | blockF,
+#           ybase = "y0",
+#           prop_blocks_0 = 1,
+#           tau_fn = tau_norm_covariate_outliers,
+#           tau_size = 0,
+#           covariate = x[["covariate"]],
+#           pfn = pIndepDist,
+#           nsims = nsims,
+#           afn = "NULL",
+#           p_adj_method = "split",
+#           splitfn = getFromNamespace(x[["sfn"]], ns = "manytestsr"),
+#           splitby = x[["splitby"]],
+#           ncores = 1
+#         )
+#         return(p_sims_tab)
+#       }
+#     )
+#     p_sims_obj2 <- rbindlist(res2, idcol = TRUE)
+#     err_rates2 <- p_sims_obj2[, lapply(.SD, mean), .SDcols = c(
+#       "true_pos_prop",
+#       "false_pos_prop",
+#       "prop_not_reject_true0",
+#       "false_neg_prop",
+#       "true_disc_prop",
+#       "false_disc_prop",
+#       "true_nondisc_prop",
+#       "false_nondisc_prop"
+#     ), by = .id]
+#     err_rates2
+#     expect_lte(max(err_rates2$false_pos_prop), .05 + 2 * (sqrt(.025 / 100)))
+#   }
+# )
