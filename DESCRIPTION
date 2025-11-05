@@ -1,4 +1,4 @@
-Package: TreeTestsSim
+Package: TreeTestSim
 Title: Enables simulation of hypothesis tests on tree-like structures
 Version: 0.0.0.9000
 Authors@R:
