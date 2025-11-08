@@ -16,7 +16,8 @@ simulate_test_DT(
   global_adj = "hommel",
   alpha_method = "fixed",
   return_details = TRUE,
-  final_global_adj = "none"
+  final_global_adj = "none",
+  monotonicity = TRUE
 )
 }
 \arguments{
@@ -43,6 +44,10 @@ simulate_test_DT(
 \item{return_details}{Logical. Whether to return the full simulated data.table.}
 
 \item{final_global_adj}{Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}.}
+
+\item{monotonicity}{Logical. TRUE if we require child nodes p-values to be
+no larger than those of parent nodes. FALSE child nodes could have smaller
+p-values.}
 }
 \value{
 A list with components:

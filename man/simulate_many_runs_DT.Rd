@@ -19,6 +19,7 @@ simulate_many_runs_DT(
   alpha_method = "fixed",
   final_global_adj = "none",
   multicore = FALSE,
+  monotonicity = TRUE,
   ...
 )
 }
@@ -50,6 +51,10 @@ simulate_many_runs_DT(
 \item{final_global_adj}{Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}.}
 
 \item{multicore}{Logical. Whether to use multiple cores (via \code{parallel::mclapply}).}
+
+\item{monotonicity}{Logical. TRUE if we require child nodes p-values to be
+no larger than those of parent nodes. FALSE child nodes could have smaller
+p-values.}
 
 \item{...}{Additional arguments passed to \code{simulate_test_DT()}.}
 }

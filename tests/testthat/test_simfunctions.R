@@ -108,14 +108,14 @@ res_half_investing_tree$nodes %>%
   mutate(across(where(is.numeric), zapsmall)) %>%
   select(-blocks)
 
-test_that("Assess the error calculation function on the test in every block or bottom-up approach",{
-res_half_bottom_up <- adjust_block_tests(idat = idt, bdat = bdt1, blockid = "bF", pfn = pOneway, p_adj_method = "hommel", fmla = Y_half_tau1 ~ trtF, copydts = TRUE)
+test_that("Assess the error calculation function on the test in every block or bottom-up approach", {
+  res_half_bottom_up <- adjust_block_tests(idat = idt, bdat = bdt1, blockid = "bF", pfn = pOneway, p_adj_method = "hommel", fmla = Y_half_tau1 ~ trtF, copydts = TRUE)
 
-res_half_bottom_up_errs <- calc_errs_new(res_half_bottom_up, truevar_name = "nonnull") %>% select(contains("lea"))
-expect_equal(sum(res_half_bottom_up$nonnull), res_half_bottom_up_errs$num_nonnull_leaves_tested)
-expect_equal(res_half_bottom_up_errs$leaf_rejections, sum(res_half_bottom_up[, max_p <= .05]))
-expect_equal(res_half_bottom_up_errs$leaf_true_discoveries, sum(res_half_bottom_up[nonnull == TRUE, max_p <= .05]))
-expect_equal(res_half_bottom_up_errs$leaf_power, mean(res_half_bottom_up[nonnull == TRUE, max_p <= .05]))
+  res_half_bottom_up_errs <- calc_errs_new(res_half_bottom_up, truevar_name = "nonnull") %>% select(contains("lea"))
+  expect_equal(sum(res_half_bottom_up$nonnull), res_half_bottom_up_errs$num_nonnull_leaves_tested)
+  expect_equal(res_half_bottom_up_errs$leaf_rejections, sum(res_half_bottom_up[, max_p <= .05]))
+  expect_equal(res_half_bottom_up_errs$leaf_true_discoveries, sum(res_half_bottom_up[nonnull == TRUE, max_p <= .05]))
+  expect_equal(res_half_bottom_up_errs$leaf_power, mean(res_half_bottom_up[nonnull == TRUE, max_p <= .05]))
 })
 
 alpha_and_splits <- expand.grid(
@@ -234,7 +234,7 @@ err_testing_fn <-
     if (thetree$test_summary$num_leaves_tested > 0) {
       expect_equal(as.numeric(thetree$test_summary$leaf_rejections), errs$nreject)
     } else {
-      expect_equal(thetree$test_summary$leaf_rejections==0, errs$nreject == 0)
+      expect_equal(thetree$test_summary$leaf_rejections == 0, errs$nreject == 0)
     }
 
     expect_equal(errs$true_pos_prop, err_tab["1", "0"] / tottests)
@@ -278,7 +278,7 @@ err_testing_bottom_up <-
     )]
 
     err_tab0 <- with(blocks, table(rejected = hit, non_zero_effect = anynotnull, exclude = c()))
-    #err_tab0 <- with(blocks, table(rejected = hit, true0 = true0, exclude = c()))
+    # err_tab0 <- with(blocks, table(rejected = hit, true0 = true0, exclude = c()))
     ## Make a table of rejections by hypotheses
     ##                      True 0      "0"      |  Not True 0 (actual effect) "1"
     ## Not Reject "0"  True Reject (not error)   |    False reject (low power error)
@@ -293,13 +293,13 @@ err_testing_bottom_up <-
       err_tab <- err_tab0
     }
 
-## So:
-  ## err_tab["1","1"] are the number of correct rejections
-  ## err_tab["0","0"] are the number of correct not-rejections
-  ## err_tab["1","0"] are the number of false positive rejections (rejecting a null effect)
-  ## err_tab["0","1"] are the number of false negative rejections (failing to reject a null effect) (a measure of power)
-  ## power would be 1 - (err_tab["0","1"]/sum(err_tab[,"1"])) --- 1 - proportion of non-null effects not rejected=proportion of non-effects rejected
-  ## or err_tab["1","1"]/sum(err_tab[,"1"])
+    ## So:
+    ## err_tab["1","1"] are the number of correct rejections
+    ## err_tab["0","0"] are the number of correct not-rejections
+    ## err_tab["1","0"] are the number of false positive rejections (rejecting a null effect)
+    ## err_tab["0","1"] are the number of false negative rejections (failing to reject a null effect) (a measure of power)
+    ## power would be 1 - (err_tab["0","1"]/sum(err_tab[,"1"])) --- 1 - proportion of non-null effects not rejected=proportion of non-effects rejected
+    ## or err_tab["1","1"]/sum(err_tab[,"1"])
 
     errs <- calc_errs_new(
       testobj = theres,
@@ -310,20 +310,19 @@ err_testing_bottom_up <-
     tottests <- sum(err_tab)
     tottests_from_calc_errs <- errs$num_leaves_tested
     expect_equal(tottests, tottests_from_calc_errs)
-  ## This approach has to test in all leaves
+    ## This approach has to test in all leaves
     expect_equal(tottests, errs$num_leaves)
 
-  expect_equal(errs$leaf_rejections,sum(err_tab["1",]))
+    expect_equal(errs$leaf_rejections, sum(err_tab["1", ]))
     expect_equal(errs$leaf_true_discoveries, err_tab["1", "1"])
-  if(!is.na(errs$leaf_power)){
-    expect_equal(errs$leaf_power, err_tab["1", "1"] / max(1, sum(err_tab[,"1"])))
-  }
+    if (!is.na(errs$leaf_power)) {
+      expect_equal(errs$leaf_power, err_tab["1", "1"] / max(1, sum(err_tab[, "1"])))
+    }
     expect_equal(errs$leaf_false_discovery_prop, err_tab["1", "0"] / max(1, sum(err_tab["1", ])))
 
-    if(!is.na(errs$leaf_false_rejection_prop)){
-    expect_equal(errs$leaf_false_rejection_prop, err_tab["1", "0"] / tottests)
-  }
-
+    if (!is.na(errs$leaf_false_rejection_prop)) {
+      expect_equal(errs$leaf_false_rejection_prop, err_tab["1", "0"] / tottests)
+    }
   }
 
 err_testing_fn(
@@ -554,63 +553,62 @@ test_that(
 )
 
 
-test_that("Some simulation code runs without error",{
+test_that("Some simulation code runs without error", {
   skip()
   skip_on_ci()
   skip_on_cran()
 
-### This next is less of a test with expected results and more to ensure that the code runs without error.
-simparms <- cbind(alpha_and_splits, p_adj_method = rep("split", nrow(alpha_and_splits)))
-simparms <- rbind(simparms, c("NULL", "NULL", "NULL", "fdr"))
-simparms <- data.table(simparms)
-simresnms <- apply(simparms, 1, function(x) {
-  paste(x, collapse = "_", sep = "")
-})
+  ### This next is less of a test with expected results and more to ensure that the code runs without error.
+  simparms <- cbind(alpha_and_splits, p_adj_method = rep("split", nrow(alpha_and_splits)))
+  simparms <- rbind(simparms, c("NULL", "NULL", "NULL", "fdr"))
+  simparms <- data.table(simparms)
+  simresnms <- apply(simparms, 1, function(x) {
+    paste(x, collapse = "_", sep = "")
+  })
 
-set.seed(12345)
-p_sims_res <- lapply(
-  seq_len(nrow(simparms)),
-  FUN = function(i) {
-    x <- simparms[i, ]
-    xnm <- paste(x, collapse = "_")
-    message(xnm)
-    nsims <- 10 ## 100
-    p_sims_tab <- padj_test_fn(
-      idat = idat3,
-      bdat = bdat4,
-      blockid = "bF",
-      trtid = "Z",
-      fmla = Y ~ ZF | bF,
-      ybase = "y0",
-      prop_blocks_0 = .5,
-      tau_fn = tau_norm_covariate_outliers,
-      tau_size = .5,
-      covariate = "v4",
-      pfn = pOneway,
-      nsims = nsims,
-      afn = ifelse(x[["afn"]] != "NULL", getFromNamespace(x[["afn"]], ns = "manytestsr"), "NULL"),
-      p_adj_method = x[["p_adj_method"]],
-      splitfn = ifelse(x[["sfn"]] != "NULL", getFromNamespace(x[["sfn"]], ns = "manytestsr"), "NULL"),
-      splitby = x[["splitby"]],
-      local_adj_p_fn = local_unadj_all_ps,
-      bottom_up_adj = "hommel",
-      return_bottom_up = TRUE,
-      return_details = FALSE,
-      ncores = 2
-    )
-    return(p_sims_tab)
-  }
-)
+  set.seed(12345)
+  p_sims_res <- lapply(
+    seq_len(nrow(simparms)),
+    FUN = function(i) {
+      x <- simparms[i, ]
+      xnm <- paste(x, collapse = "_")
+      message(xnm)
+      nsims <- 10 ## 100
+      p_sims_tab <- padj_test_fn(
+        idat = idat3,
+        bdat = bdat4,
+        blockid = "bF",
+        trtid = "Z",
+        fmla = Y ~ ZF | bF,
+        ybase = "y0",
+        prop_blocks_0 = .5,
+        tau_fn = tau_norm_covariate_outliers,
+        tau_size = .5,
+        covariate = "v4",
+        pfn = pOneway,
+        nsims = nsims,
+        afn = ifelse(x[["afn"]] != "NULL", getFromNamespace(x[["afn"]], ns = "manytestsr"), "NULL"),
+        p_adj_method = x[["p_adj_method"]],
+        splitfn = ifelse(x[["sfn"]] != "NULL", getFromNamespace(x[["sfn"]], ns = "manytestsr"), "NULL"),
+        splitby = x[["splitby"]],
+        local_adj_p_fn = local_unadj_all_ps,
+        bottom_up_adj = "hommel",
+        return_bottom_up = TRUE,
+        return_details = FALSE,
+        ncores = 2
+      )
+      return(p_sims_tab)
+    }
+  )
 
-names(p_sims_res) <- simresnms
+  names(p_sims_res) <- simresnms
 
-lapply(p_sims_res, function(obj) {
-  obj[, lapply(.SD, mean)]
-})
+  lapply(p_sims_res, function(obj) {
+    obj[, lapply(.SD, mean)]
+  })
 
 
-p_sims_obj <- rbindlist(p_sims_res[1:15], idcol = TRUE)
-
+  p_sims_obj <- rbindlist(p_sims_res[1:15], idcol = TRUE)
 })
 
 
@@ -670,4 +668,5 @@ p_sims_obj <- rbindlist(p_sims_res[1:15], idcol = TRUE)
 #     err_rates2
 #     expect_lte(max(err_rates2$false_pos_prop), .05 + 2 * (sqrt(.025 / 100)))
 #   }
+# )
 # )

@@ -19,6 +19,11 @@
 #' @param alpha_method Character. One of \code{"fixed"}, \code{"spending"}, \code{"investing"}.
 #' @param final_global_adj Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}.
 #' @param multicore Logical. Whether to use multiple cores (via \code{parallel::mclapply}).
+
+#' @param monotonicity Logical. TRUE if we require child nodes p-values to be
+#' no larger than those of parent nodes. FALSE child nodes could have smaller
+#' p-values.
+
 #' @param ... Additional arguments passed to \code{simulate_test_DT()}.
 #'
 #' @return A named numeric vector giving averaged error rates and discovery metrics across simulations.
@@ -27,7 +32,7 @@
 #' @export
 simulate_many_runs_DT <- function(n_sim, t, k, max_level, alpha, N_total, beta_base = 0.1,
                                   adj_effN = TRUE, local_adj_p_fn = local_simes, return_details = FALSE,
-                                  global_adj = "hommel", alpha_method = "fixed", final_global_adj = "none", multicore = FALSE, ...) {
+                                  global_adj = "hommel", alpha_method = "fixed", final_global_adj = "none", multicore = FALSE, monotonicity = TRUE, ...) {
   treeDT <- generate_tree_DT(max_level, k, t)
 
   if (multicore) {
@@ -43,7 +48,7 @@ simulate_many_runs_DT <- function(n_sim, t, k, max_level, alpha, N_total, beta_b
         effN = N_total, N_total = N_total, beta_base = beta_base,
         adj_effN = adj_effN, local_adj_p_fn = local_adj_p_fn, global_adj = global_adj,
         alpha_method = alpha_method, return_details = return_details,
-        final_global_adj = final_global_adj, ...
+        final_global_adj = final_global_adj, monotonicity = monotonicity, ...
       )
     },
     mc.cores = ncores, mc.set.seed = TRUE

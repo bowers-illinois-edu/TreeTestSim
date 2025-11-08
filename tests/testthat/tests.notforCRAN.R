@@ -1,9 +1,9 @@
 ## This next takes too long for ordinary testing especially on CRAN
 
 
-##devtools::load_all()
-##library(dtplyr)
-##library(dplyr)
+## devtools::load_all()
+## library(dtplyr)
+## library(dplyr)
 
 test_that("simulating many p-values does what we expect", {
   skip()
@@ -56,7 +56,7 @@ test_that("simulating many p-values does what we expect", {
       n_sim = n_sims, t = 0, k = thek, max_level = thel,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
-      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
       final_global_adj = x$final_adj_method,
@@ -109,7 +109,7 @@ test_that("simulating many p-values does what we expect", {
       n_sim = n_sims, t = 1, k = thek, max_level = thel,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
-      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
       final_global_adj = x$final_adj_method,
@@ -154,7 +154,7 @@ test_that("simulating many p-values does what we expect", {
       n_sim = n_sims, t = .1, k = thek, max_level = thel,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
-      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
       final_global_adj = x$final_adj_method,
@@ -243,7 +243,7 @@ test_that("simulating many p-values does what we expect", {
       n_sim = n_sims, t = .5, k = 10, max_level = 4,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
-      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
       final_global_adj = x$final_adj_method,

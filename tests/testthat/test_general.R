@@ -1,5 +1,4 @@
-
-#devtools::load_all()
+# devtools::load_all()
 
 test_that("generate_tree_DT creates a complete tree with correct columns and levels", {
   max_level <- 2
@@ -207,7 +206,7 @@ test_that("All arguments work. No errors", {
       n_sim = 5, t = 0, k = 3, max_level = 3,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
-      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
       final_global_adj = x$final_adj_method,
@@ -224,7 +223,7 @@ test_that("All arguments work. No errors", {
       n_sim = 5, t = 1, k = 3, max_level = 3,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
-      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
       final_global_adj = x$final_adj_method,
@@ -241,7 +240,7 @@ test_that("All arguments work. No errors", {
       n_sim = 5, t = .5, k = 3, max_level = 3,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
-      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
       final_global_adj = x$final_adj_method,
@@ -280,7 +279,7 @@ test_that("simulating many p-values does what we expect", {
       n_sim = n_sims, t = 0, k = 3, max_level = 3,
       alpha = 0.05, N_total = 1000, beta_base = 0.1,
       adj_effN = x$adj_effN,
-      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestsSim"),
+      local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
       final_global_adj = x$final_adj_method,

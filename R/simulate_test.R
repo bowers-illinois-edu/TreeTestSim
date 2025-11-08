@@ -32,6 +32,11 @@
 #' @param alpha_method Character. One of \code{"fixed"}, \code{"spending"}, \code{"investing"}, \code{"fixed_k_adj"}, \code{"adaptive_k_adj"}.
 #' @param return_details Logical. Whether to return the full simulated data.table.
 #' @param final_global_adj Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}.
+
+#' @param monotonicity Logical. TRUE if we require child nodes p-values to be
+#' no larger than those of parent nodes. FALSE child nodes could have smaller
+#' p-values.
+
 #'
 #' @return A list with components:
 #' \describe{
@@ -48,7 +53,7 @@
 #' @export
 simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
                              adj_effN = TRUE, local_adj_p_fn = local_simes, global_adj = "hommel",
-                             alpha_method = "fixed", return_details = TRUE, final_global_adj = "none") {
+                             alpha_method = "fixed", return_details = TRUE, final_global_adj = "none", monotonicity = TRUE) {
   tree_sim <- copy(treeDT)
   tree_sim[, `:=`(p_val = NA_real_, alpha_alloc = NA_real_)]
   setkey(tree_sim, "node")
@@ -74,13 +79,13 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
   ## for this for a t-test maybe??? Basically, we can have minimum power (say,
   ## imagine relatively large leaves, say N=50, with 25 treated and 25
   ## controls, so pbeta(.05,a,1)==blah where blah is the power of a t.test like
-  ## power.t.test()). For example, power.t.test(delta=.8,sd=1,sig.level=.05,n=25) -> power=.8
-  ## imagine for the sake of these simulations that no block has fewer than that.
-  ## So we get num_leaves*(25*2) as the total size of the N in the dataset. And this determines the top level power.
-  ## At each split we divide the N_node/k -> convert to t.test power
-  ## Effect at each node is the size weighted average of the block averages of that block (for delta, assume sd=1).
-
-
+  ## power.t.test()). For example,
+  ## power.t.test(delta=.8,sd=1,sig.level=.05,n=25) -> power=.8 imagine for the
+  ## sake of these simulations that no block has fewer than that. So we get
+  ## num_leaves*(25*2) as the total size of the N in the dataset. And this
+  ## determines the top level power. At each split we divide the N_node/k ->
+  ## convert to t.test power Effect at each node is the size weighted average
+  ## of the block averages of that block (for delta, assume sd=1).
 
   effN_leaves <- N_total / (k^max_level)
   beta_eff_leaves_raw <- beta_base * sqrt(N_total / effN_leaves)
@@ -133,6 +138,7 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
       child_rows <- tree_sim[parent == parent_node & level == l]
       if (nrow(child_rows) == 0) next
 
+      ## This next is an attempt to simulate power loss through sample splitting
       if (adj_effN) {
         effN_current <- N_total / (k^l)
         beta_eff_raw <- beta_base * sqrt(N_total / effN_current)
@@ -142,11 +148,21 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
         effective_beta <- beta_base
       }
 
-      child_rows[is.na(p_sim), p_sim := fifelse(
-        nonnull,
-        parent_p + (1 - parent_p) * rbeta(.N, effective_beta, 1),
-        runif(.N, min = parent_p, max = 1)
-      )]
+      if (monotonicity) {
+        ## If we require that child nodes have equal to or higher p-values than parents:
+        child_rows[is.na(p_sim), p_sim := fifelse(
+          nonnull,
+          parent_p + (1 - parent_p) * rbeta(.N, effective_beta, 1),
+          runif(.N, min = parent_p, max = 1)
+        )]
+      } else {
+        parent_p_tmp <- 0
+        child_rows[is.na(p_sim), p_sim := fifelse(
+          nonnull,
+          parent_p_tmp + (1 - parent_p_tmp) * rbeta(.N, effective_beta, 1),
+          runif(.N, min = parent_p_tmp, max = 1)
+        )]
+      }
 
       child_rows[is.na(p_val), p_val := p_sim]
 
