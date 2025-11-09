@@ -392,7 +392,7 @@ reveal_po_and_test_siup <- function(idat, bdat, blockid, trtid, fmla = Y ~ newZF
     )
   }
 
-  res_tree <- make_results_tree(orig_res = res$bdat, block_id = blockid, truevar_name = truevar_name)
+  res_tree <- make_results_tree(orig_res = res, block_id = blockid, truevar_name = truevar_name)
 
   ## errs_tree <- calc_errs_new(
   ##  testobj = res$bdat,

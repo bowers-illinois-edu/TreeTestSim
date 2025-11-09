@@ -264,7 +264,7 @@ calc_errs_new <- function(testobj,
 
     num_nodes <- NA
     # the block level dataset has one row for each leaf or block
-    num_leaves <- nrow(testobj)
+    num_blocks <- nrow(testobj)
     num_nodes_tested <- NA
     num_nonnull_nodes_tested <- NA
     node_rejections <- NA
@@ -297,7 +297,7 @@ calc_errs_new <- function(testobj,
 
     test_summary <- data.table(
       num_nodes = num_nodes,
-      num_leaves = num_leaves,
+      num_blocks= num_blocks,
       num_nodes_tested = num_nodes_tested,
       num_nonnull_nodes_tested = num_nonnull_nodes_tested,
       node_rejections = node_rejections,
