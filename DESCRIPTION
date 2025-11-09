@@ -1,6 +1,6 @@
 Package: TreeTestSim
 Title: Enables simulation of hypothesis tests on tree-like structures
-Version: 0.0.0.9090
+Version: 0.0.0.9100
 Authors@R:
     person("Jake", "Bowers", , "jake@jakebowers.org", role = c("aut", "cre"))
 Description: This package helps researchers study hypothesis testing procedures when those hypotheses are organized in a tree-like structure. It has functions to generate k-ary trees with known proportions of leaves and nodes have non-zero or zero effects, enables the creation of simulated block or strata randomized experimental designs that can be organized in a nested tree-like format, and has helper functions which can be run to explore the impact of different analytic decisions on the outcomes of the testing.
