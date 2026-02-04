@@ -17,7 +17,9 @@ simulate_test_DT(
   alpha_method = "fixed",
   return_details = TRUE,
   final_global_adj = "none",
-  monotonicity = TRUE
+  monotonicity = TRUE,
+  delta_hat = NULL,
+  tau = 0.1
 )
 }
 \arguments{
@@ -39,7 +41,12 @@ simulate_test_DT(
 
 \item{global_adj}{Character. The method to adjust the leaves (e.g. "hommel").}
 
-\item{alpha_method}{Character. One of \code{"fixed"}, \code{"spending"}, \code{"investing"}, \code{"fixed_k_adj"}, \code{"adaptive_k_adj"}.}
+\item{alpha_method}{Character. One of \code{"fixed"}, \code{"spending"},
+\code{"investing"}, \code{"fixed_k_adj"}, \code{"adaptive_k_adj"}, or
+\code{"adaptive_power"}. The \code{"adaptive_power"} method uses
+\code{\link[manytestsr]{compute_adaptive_alphas}} to precompute a
+depth-indexed alpha schedule based on estimated power decay through the
+tree.}
 
 \item{return_details}{Logical. Whether to return the full simulated data.table.}
 
@@ -48,6 +55,16 @@ simulate_test_DT(
 \item{monotonicity}{Logical. TRUE if we require child nodes p-values to be
 no larger than those of parent nodes. FALSE child nodes could have smaller
 p-values.}
+
+\item{delta_hat}{Numeric or NULL. Estimated standardized effect size for
+\code{alpha_method = "adaptive_power"}. If NULL (default), derived
+automatically from \code{beta_base} and \code{N_total} by matching root
+power. Ignored for other alpha methods.}
+
+\item{tau}{Numeric. Cumulative power threshold for
+\code{alpha_method = "adaptive_power"} (default 0.1). When cumulative
+power drops below tau, natural gating is deemed sufficient and nominal
+alpha is used. Ignored for other alpha methods.}
 }
 \value{
 A list with components:

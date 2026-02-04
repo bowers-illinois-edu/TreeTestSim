@@ -1,3 +1,21 @@
+#' Derive delta_hat from beta_base and N_total
+#'
+#' Matches root-level power between the beta DGP used in abstract simulations
+#' and the normal power formula used by compute_adaptive_alphas.
+#'
+#' @param beta_base Numeric. The base parameter for the beta distribution.
+#' @param N_total Numeric. The total sample size at the root.
+#' @param alpha Numeric. The nominal significance level.
+#' @return A positive numeric scalar: the equivalent delta_hat.
+#' @keywords internal
+derive_delta_hat <- function(beta_base, N_total, alpha = 0.05) {
+  root_power <- pbeta(alpha, beta_base, 1)
+  # Clamp to avoid qnorm(0) or qnorm(1)
+  root_power <- max(min(root_power, 1 - 1e-10), 1e-10)
+  dhat <- (qnorm(root_power) + qnorm(1 - alpha / 2)) / sqrt(N_total)
+  return(max(dhat, 1e-8))
+}
+
 #' Simulate the Testing Procedure on a k-ary Tree with Optional Alpha Spending/Investing
 #'
 #' @description
@@ -29,9 +47,22 @@
 #' @param adj_effN Logical. Whether to adjust the effective sample size at deeper levels.
 #' @param local_adj_p_fn Function. A function that adjusts p-values at a node (e.g. \code{local_simes}).
 #' @param global_adj Character. The method to adjust the leaves (e.g. "hommel").
-#' @param alpha_method Character. One of \code{"fixed"}, \code{"spending"}, \code{"investing"}, \code{"fixed_k_adj"}, \code{"adaptive_k_adj"}.
+#' @param alpha_method Character. One of \code{"fixed"}, \code{"spending"},
+#'   \code{"investing"}, \code{"fixed_k_adj"}, \code{"adaptive_k_adj"}, or
+#'   \code{"adaptive_power"}. The \code{"adaptive_power"} method uses
+#'   \code{\link[manytestsr]{compute_adaptive_alphas}} to precompute a
+#'   depth-indexed alpha schedule based on estimated power decay through the
+#'   tree.
 #' @param return_details Logical. Whether to return the full simulated data.table.
 #' @param final_global_adj Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}.
+#' @param delta_hat Numeric or NULL. Estimated standardized effect size for
+#'   \code{alpha_method = "adaptive_power"}. If NULL (default), derived
+#'   automatically from \code{beta_base} and \code{N_total} by matching root
+#'   power. Ignored for other alpha methods.
+#' @param tau Numeric. Cumulative power threshold for
+#'   \code{alpha_method = "adaptive_power"} (default 0.1). When cumulative
+#'   power drops below tau, natural gating is deemed sufficient and nominal
+#'   alpha is used. Ignored for other alpha methods.
 
 #' @param monotonicity Logical. TRUE if we require child nodes p-values to be
 #' no larger than those of parent nodes. FALSE child nodes could have smaller
@@ -53,7 +84,8 @@
 #' @export
 simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
                              adj_effN = TRUE, local_adj_p_fn = local_simes, global_adj = "hommel",
-                             alpha_method = "fixed", return_details = TRUE, final_global_adj = "none", monotonicity = TRUE) {
+                             alpha_method = "fixed", return_details = TRUE, final_global_adj = "none",
+                             monotonicity = TRUE, delta_hat = NULL, tau = 0.1) {
   tree_sim <- copy(treeDT)
   tree_sim[, `:=`(p_val = NA_real_, alpha_alloc = NA_real_)]
   setkey(tree_sim, "node")
@@ -107,6 +139,28 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
   bottom_up_power <- mean(tree_sim[level == max_level & nonnull == TRUE, bottom_up_p_adj] <= alpha)
   num_leaves <- nrow(tree_sim[level == max_level])
 
+  # Dual bottom-up: always compute both hommel and BH on leaf p_sim
+  tree_sim[level == max_level, bu_hommel_p := local_hommel_all_ps(p_sim)]
+  bu_hommel_false_error <- any(tree_sim[level == max_level & nonnull == FALSE, bu_hommel_p] <= alpha)
+  bu_hommel_true_disc <- sum(tree_sim[level == max_level & nonnull == TRUE, bu_hommel_p] <= alpha)
+  bu_hommel_power <- mean(tree_sim[level == max_level & nonnull == TRUE, bu_hommel_p] <= alpha)
+
+  tree_sim[level == max_level, bu_bh_p := p.adjust(p_sim, method = "BH")]
+  bu_bh_false_error <- any(tree_sim[level == max_level & nonnull == FALSE, bu_bh_p] <= alpha)
+  bu_bh_true_disc <- sum(tree_sim[level == max_level & nonnull == TRUE, bu_bh_p] <= alpha)
+  bu_bh_power <- mean(tree_sim[level == max_level & nonnull == TRUE, bu_bh_p] <= alpha)
+
+  # Precompute adaptive alpha schedule if needed
+  if (alpha_method == "adaptive_power") {
+    if (is.null(delta_hat)) {
+      delta_hat <- derive_delta_hat(beta_base, N_total, alpha)
+    }
+    alpha_schedule <- manytestsr::compute_adaptive_alphas(
+      k = k, delta_hat = delta_hat, N_total = N_total,
+      tau = tau, max_depth = max_level + 1L, thealpha = alpha
+    )
+  }
+
   # Top-down procedure
   for (l in 1:max_level) {
     active_parents <- tree_sim[level == (l - 1) & !is.na(p_val) & (p_val <= alpha_alloc), .(node, alpha_alloc, p_val)]
@@ -131,8 +185,12 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
         child_threshold <- alpha / (1 + alpha * k)
       } else if (alpha_method == "adaptive_k_adj") {
         child_threshold <- parent_p + (1 - parent_p) * (alpha / k)
+      } else if (alpha_method == "adaptive_power") {
+        # Tree levels are 0-indexed (root = 0); compute_adaptive_alphas is
+        # 1-indexed (root = 1). Children at tree level l -> depth l + 1.
+        child_threshold <- alpha_schedule[l + 1]
       } else {
-        stop("alpha_method must be one of 'fixed', 'spending', 'investing', 'fixed_k_adj', or 'adaptive_k_adj'.")
+        stop("alpha_method must be one of 'fixed', 'spending', 'investing', 'fixed_k_adj', 'adaptive_k_adj', or 'adaptive_power'.")
       }
 
       child_rows <- tree_sim[parent == parent_node & level == l]
@@ -219,7 +277,13 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
     bottom_up_false_error = bottom_up_false_error,
     bottom_up_true_discoveries = bottom_up_true_discoveries,
     bottom_up_power = bottom_up_power,
-    num_leaves = num_leaves
+    num_leaves = num_leaves,
+    bu_hommel_false_error = bu_hommel_false_error,
+    bu_hommel_true_disc = bu_hommel_true_disc,
+    bu_hommel_power = bu_hommel_power,
+    bu_bh_false_error = bu_bh_false_error,
+    bu_bh_true_disc = bu_bh_true_disc,
+    bu_bh_power = bu_bh_power
   )
 
   if (return_details) {
