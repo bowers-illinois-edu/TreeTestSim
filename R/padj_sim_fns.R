@@ -78,6 +78,10 @@
 #' "hommel" or "fdr". When doing simulations where `p_adj_method` include such
 #' approaches, care is needed.(TODO fix this)
 
+#' @param return_bottom_up TRUE means that the function should also return
+#' results from the bottom-up (test every block and adjust) approach for
+#' comparison with the top-down SIUP approach. Default is TRUE.
+
 #' @return A pvalue for each block
 #' @import manytestsr
 #' @export
@@ -222,6 +226,14 @@ padj_test_fn <- function(idat, bdat, blockid, trtid = "trt", fmla = Y ~ trtF | b
 #' the original data ("detobj"), a summary of the results ("detresults"), and a
 #' node level dataset  ("detnodes"). Default here is FALSE. Only use TRUE when
 #' not using simulations.
+#' @param local_adj_p_fn A function used to adjust p-values at each step. Not
+#' used in this bottom-up function but included for interface compatibility.
+#' @param return_bottom_up Logical. Not used in this function but included for
+#' interface compatibility with reveal_po_and_test_siup.
+#' @param blocksize The character name of the column that measures the block
+#' size. Not used in this function but included for interface compatibility.
+#' @param bottom_up_adj A string for the p.adjust function such as "hommel" or
+#' "fdr". Not used in this function but included for interface compatibility.
 
 #' @return False positive proportion out of the tests across the blocks, The
 #' false discovery rate (proportion rejected of false nulls out of all
@@ -322,6 +334,15 @@ reveal_po_and_test <- function(idat, bdat, blockid, trtid, fmla = NULL, ybase, y
 #' the original data ("detobj"), a summary of the results ("detresults"), and a
 #' node level dataset  ("detnodes"). Default here is FALSE. Only use TRUE when
 #' not using simulations.
+#' @param local_adj_p_fn A function used to adjust p-values at each step (the
+#' p-values of the children of a given parent).
+#' @param truevar_name A string indicating the name of the variable containing
+#' the true underlying causal effect (at the block level). Default is "nonnull".
+#' @param return_bottom_up TRUE means that the function should also return
+#' results from the bottom-up (test every block and adjust) approach for
+#' comparison with the top-down SIUP approach. Default is TRUE.
+#' @param bottom_up_adj A string for the p.adjust function such as "hommel" or
+#' "fdr" to use for the bottom-up comparison.
 
 #' @return False positive proportion out of the tests across the blocks, The
 #' false discovery rate (proportion rejected of false nulls out of all

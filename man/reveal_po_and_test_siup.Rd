@@ -59,6 +59,9 @@ under treatment --- it is a treatment effect creating function.}
 
 \item{afn}{A function to adjust alpha at each step. Takes one or more p-values plus a stratum or batch indicator.}
 
+\item{local_adj_p_fn}{A function used to adjust p-values at each step (the
+p-values of the children of a given parent).}
+
 \item{p_adj_method}{Must be "split" here.}
 
 \item{copydts}{TRUE or FALSE. TRUE if using find_blocks standalone. FALSE if
@@ -79,12 +82,22 @@ should continue but split randomly.}
 
 \item{ncores}{The number of cores or threads to use for the test statistic creation and possible permutation testing}
 
+\item{truevar_name}{A string indicating the name of the variable containing
+the true underlying causal effect (at the block level). Default is "nonnull".}
+
 \item{blocksize}{The character name of the column that measures the block size.}
 
 \item{return_details}{TRUE means that the function should return a list of
 the original data ("detobj"), a summary of the results ("detresults"), and a
 node level dataset  ("detnodes"). Default here is FALSE. Only use TRUE when
 not using simulations.}
+
+\item{return_bottom_up}{TRUE means that the function should also return
+results from the bottom-up (test every block and adjust) approach for
+comparison with the top-down SIUP approach. Default is TRUE.}
+
+\item{bottom_up_adj}{A string for the p.adjust function such as "hommel" or
+"fdr" to use for the bottom-up comparison.}
 }
 \value{
 False positive proportion out of the tests across the blocks, The

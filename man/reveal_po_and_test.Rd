@@ -83,6 +83,18 @@ split randomly.}
 the original data ("detobj"), a summary of the results ("detresults"), and a
 node level dataset  ("detnodes"). Default here is FALSE. Only use TRUE when
 not using simulations.}
+
+\item{local_adj_p_fn}{A function used to adjust p-values at each step. Not
+used in this bottom-up function but included for interface compatibility.}
+
+\item{return_bottom_up}{Logical. Not used in this function but included for
+interface compatibility with reveal_po_and_test_siup.}
+
+\item{blocksize}{The character name of the column that measures the block
+size. Not used in this function but included for interface compatibility.}
+
+\item{bottom_up_adj}{A string for the p.adjust function such as "hommel" or
+"fdr". Not used in this function but included for interface compatibility.}
 }
 \value{
 False positive proportion out of the tests across the blocks, The

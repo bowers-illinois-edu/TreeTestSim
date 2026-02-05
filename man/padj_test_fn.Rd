@@ -112,6 +112,10 @@ should continue but split randomly.}
 the original data ("detobj"), a summary of the results ("detresults"), and a
 node level dataset  ("detnodes"). Default here is FALSE. Only use TRUE when
 not using simulations.}
+
+\item{return_bottom_up}{TRUE means that the function should also return
+results from the bottom-up (test every block and adjust) approach for
+comparison with the top-down SIUP approach. Default is TRUE.}
 }
 \value{
 A pvalue for each block

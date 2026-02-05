@@ -1,3 +1,4 @@
+^\.claude$
 ^renv$
 ^renv\.lock$
 Makefile
@@ -5,18 +6,18 @@ checkspelling.R
 load.R
 inst/docs
 cran-comments.md
-.git
-.local
+^\.git$
+^\.local$
 ^revdep$
 # unit tests & related material that we don't care to share w/ CRAN
 tests/testthat/tests.notforCRAN.R
 tests/*.Rout.save
 ^.*\.Rproj$
 ^\.Rproj\.user$
-.lintr
+^\.lintr$
 src/README.md
 README.md
-.vscode
+^\.vscode$
 ^\.github$
 ^_pkgdown\.yml$
 ^docs$
