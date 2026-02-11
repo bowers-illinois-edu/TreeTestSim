@@ -30,7 +30,7 @@ appending.
 ## Testing
 
 Write well commented unit tests that will go into tests/testthat **before**
-refactoring. Tests should represent both that the code runs but most
+refactoring or producing new code. Tests should represent both that the code runs but most
 importantly they should represent the statistical principles underlying and
 justifying the code. If I am writing code to square numbers then I should have
 tests of squaring numbers --- these are more important tests than tests that

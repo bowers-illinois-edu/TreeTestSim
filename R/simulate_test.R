@@ -119,10 +119,16 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
   ## convert to t.test power Effect at each node is the size weighted average
   ## of the block averages of that block (for delta, assume sd=1).
 
-  effN_leaves <- N_total / (k^max_level)
-  beta_eff_leaves_raw <- beta_base * sqrt(N_total / effN_leaves)
-  cap_leaves <- 0.5
-  eff_beta_leaves <- min(cap_leaves, beta_eff_leaves_raw)
+  ## Power-calibrated beta for leaf-level bottom-up comparison.
+  ## Convert beta_base to effect size, compute power at leaf sample size,
+  ## then convert back to beta parameter.
+  delta_hat_bu <- derive_delta_hat(beta_base, N_total, alpha)
+  n_leaves <- N_total / (k^max_level)
+  z_crit_bu <- qnorm(1 - alpha / 2)
+  power_leaves <- pnorm(delta_hat_bu * sqrt(n_leaves) - z_crit_bu)
+  power_leaves <- max(power_leaves, alpha + 1e-6)
+  power_leaves <- min(power_leaves, 1 - 1e-10)
+  eff_beta_leaves <- log(power_leaves) / log(alpha)
   tree_sim[level == max_level, p_sim := fifelse(
     nonnull,
     rbeta(.N, eff_beta_leaves, 1),
@@ -161,6 +167,9 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
     )
   }
 
+  ## Pre-compute delta_hat for power-calibrated beta in the top-down loop
+  delta_hat_local <- derive_delta_hat(beta_base, N_total, alpha)
+
   # Top-down procedure
   for (l in 1:max_level) {
     active_parents <- tree_sim[level == (l - 1) & !is.na(p_val) & (p_val <= alpha_alloc), .(node, alpha_alloc, p_val)]
@@ -196,12 +205,21 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
       child_rows <- tree_sim[parent == parent_node & level == l]
       if (nrow(child_rows) == 0) next
 
-      ## This next is an attempt to simulate power loss through sample splitting
+      ## Power-calibrated beta parameter for data splitting.
+      ## At level l, sample size is N_total / k^l. We convert beta_base
+      ## to an equivalent effect size via the normal model, compute power
+      ## at the reduced sample size, then convert back to a beta parameter.
+      ## This ensures the simulation's power decay matches the normal
+      ## approximation used by compute_adaptive_alphas().
       if (adj_effN) {
-        effN_current <- N_total / (k^l)
-        beta_eff_raw <- beta_base * sqrt(N_total / effN_current)
-        cap <- 0.5
-        effective_beta <- min(beta_eff_raw, cap)
+        n_level <- N_total / (k^l)
+        z_crit <- qnorm(1 - alpha / 2)
+        power_level <- pnorm(delta_hat_local * sqrt(n_level) - z_crit)
+        ## Clamp: power can't drop below alpha (beta >= 1 means no power)
+        ## and can't exceed 1 - epsilon (beta must stay positive)
+        power_level <- max(power_level, alpha + 1e-6)
+        power_level <- min(power_level, 1 - 1e-10)
+        effective_beta <- log(power_level) / log(alpha)
       } else {
         effective_beta <- beta_base
       }

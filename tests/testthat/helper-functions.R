@@ -69,11 +69,9 @@ err_testing_fn <-
 
     expect_equal(
       thetree$test_summary$num_leaves_tested,
-      thetree$nodes %>%
-        filter(node_type=="leaf" & !is.na(p)) %>%
-        nrow()
+      nrow(thetree$nodes[node_type == "leaf" & !is.na(p)])
     )
-    expect_equal(theres$bdat %>% filter(blocksbygroup == 1) %>% nrow(), 
+    expect_equal(nrow(theres$bdat[blocksbygroup == 1]),
     sum(thetree$nodes$num_blocks==1,na.rm=TRUE))
 
     ## This next calculates errors and discoveries at the level of the block

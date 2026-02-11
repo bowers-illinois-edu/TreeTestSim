@@ -1,3 +1,11 @@
+# TreeTestSim 0.0.0.9201
+
+## Bug fixes
+
+* Fixed test helper `err_testing_fn()` using bare `filter()` which resolved to
+  `stats::filter` instead of `dplyr::filter` during non-interactive test runs.
+  Replaced with data.table subsetting to remove the implicit dplyr dependency.
+
 # TreeTestSim 0.0.0.9200
 
 ## New features
