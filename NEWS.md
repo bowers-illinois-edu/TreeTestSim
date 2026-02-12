@@ -1,3 +1,12 @@
+# TreeTestSim 0.0.0.9301
+
+## Bug fixes
+
+* Restored the `tau` parameter to `simulate_test_DT()`, which was
+  accidentally dropped during the `effect_size` refactor. The parameter
+  is forwarded to `manytestsr::compute_adaptive_alphas()` when
+  `alpha_method = "adaptive_power"` and defaults to 0.1.
+
 # TreeTestSim 0.0.0.9300
 
 ## Breaking changes
