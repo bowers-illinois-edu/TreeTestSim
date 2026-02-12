@@ -29,13 +29,13 @@ test_that("simulating many p-values does what we expect", {
   alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
   final_adj_methods <- c("none", "fdr", "fwer")
   local_adj_methods <- c("local_simes", "local_hommel_all_ps", "local_unadj_all_ps", "local_bh_all_ps")
-  adj_effN <- c(TRUE, FALSE)
+  power_decay_vals <- c(TRUE, FALSE)
 
   parms <- as.data.table(expand.grid(
     alpha_method = alpha_methods,
     final_adj_method = final_adj_methods,
     local_adj_method = local_adj_methods,
-    adj_effN = adj_effN,
+    power_decay = power_decay_vals,
     stringsAsFactors = FALSE
   ))
   parms[, idx := seq_len(nrow(parms))]
@@ -54,8 +54,8 @@ test_that("simulating many p-values does what we expect", {
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
       n_sim = n_sims, t = 0, k = thek, max_level = thel,
-      alpha = 0.05, N_total = 1000, beta_base = 0.1,
-      adj_effN = x$adj_effN,
+      alpha = 0.05, N_total = 1000, effect_size = 0.5,
+      power_decay = x$power_decay,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
@@ -79,15 +79,15 @@ test_that("simulating many p-values does what we expect", {
   ## control the FWER when t=0 or t=1 (which has no errors anyway and is only
   ## shown here for completeness)
 
-  expect_lt(max(res_t0[!(adj_effN), false_error]), .05 + sim_err)
+  expect_lt(max(res_t0[!(power_decay), false_error]), .05 + sim_err)
   ## And we don't have to use any local control, or any other tactic.
   ## Monotonicity, validity (i.e. p~U()), and gating are all we need
   expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps", false_error]), .05 + sim_err)
   expect_lt(max(res_t0[
-    local_adj_method == "local_unadj_all_ps" & !(adj_effN) & final_adj_method == "none",
+    local_adj_method == "local_unadj_all_ps" & !(power_decay) & final_adj_method == "none",
     false_error
   ]), .05 + sim_err)
-  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(adj_effN) &
+  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(power_decay) &
     final_adj_method == "none" &
     alpha_method == "fixed", false_error]), .05 + sim_err)
 
@@ -107,8 +107,8 @@ test_that("simulating many p-values does what we expect", {
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
       n_sim = n_sims, t = 1, k = thek, max_level = thel,
-      alpha = 0.05, N_total = 1000, beta_base = 0.1,
-      adj_effN = x$adj_effN,
+      alpha = 0.05, N_total = 1000, effect_size = 0.5,
+      power_decay = x$power_decay,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
@@ -152,8 +152,8 @@ test_that("simulating many p-values does what we expect", {
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
       n_sim = n_sims, t = .1, k = thek, max_level = thel,
-      alpha = 0.05, N_total = 1000, beta_base = 0.1,
-      adj_effN = x$adj_effN,
+      alpha = 0.05, N_total = 1000, effect_size = 0.5,
+      power_decay = x$power_decay,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
@@ -183,8 +183,6 @@ test_that("simulating many p-values does what we expect", {
   ## local_hommel_all_ps wins in general. Let's look for the set of approaches
   ## that we'd like to send to a bigger simulation
 
-  ## res_t_some_ok_fwer[order(power, decreasing = TRUE), .SD, .SDcols = c("power", "leaf_power", "false_error", parm_nms)]
-
   ## What about with alpha fixed and no final adjustment? (the original idea)
   ## Below we see that we need data splitting and local hommel
   res_t_some_ok_fwer %>%
@@ -192,36 +190,12 @@ test_that("simulating many p-values does what we expect", {
     dplyr::select(one_of(c("power", "leaf_power", "false_error", parm_nms))) %>%
     arrange(desc(power), false_error)
 
-  ##       power leaf_power false_error alpha_method final_adj_method    local_adj_method adj_effN
-  ##       <num>      <num>       <num>       <char>           <char>              <char>   <lgcl>
-  ## 1: 0.7460000  1.0000000       0.048        fixed             none     local_bh_all_ps     TRUE
-  ## 2: 0.7370000  1.0000000       0.023        fixed             none local_hommel_all_ps     TRUE
-  ## 3: 0.5926397  0.7560976       0.068        fixed             none         local_simes     TRUE
-
   ## What among those without a final adjustment method but with a varying alpha and a version of sample splitting
   ## local_simes is clearly worst so exclude here
   res_t_some_ok_fwer %>%
-    filter(final_adj_method == "none" & alpha_method != "fixed" & adj_effN & local_adj_method != "local_simes") %>%
+    filter(final_adj_method == "none" & alpha_method != "fixed" & power_decay & local_adj_method != "local_simes") %>%
     dplyr::select(one_of(c("power", "leaf_power", "false_error", parm_nms))) %>%
     arrange(desc(power), false_error)
-
-  ##   power leaf_power false_error   alpha_method final_adj_method    local_adj_method adj_effN
-  ##   <num>      <num>       <num>         <char>           <char>              <char>   <lgcl>
-  ## 1: 0.787  0.8048780       0.051      investing             none local_hommel_all_ps     TRUE
-  ## 2: 0.761  1.0000000       0.005 adaptive_k_adj             none local_hommel_all_ps     TRUE
-  ## 3: 0.756  1.0000000       0.041    fixed_k_adj             none local_hommel_all_ps     TRUE
-  ## 4: 0.746  0.7571429       0.044       spending             none local_hommel_all_ps     TRUE
-  ## 5: 0.734  1.0000000       0.011 adaptive_k_adj             none     local_bh_all_ps     TRUE
-  ## 6: 0.734  1.0000000       0.052 adaptive_k_adj             none  local_unadj_all_ps     TRUE
-  ## 7: 0.729  1.0000000       0.043    fixed_k_adj             none     local_bh_all_ps     TRUE
-  ## 8: 0.726  0.6634615       0.075      investing             none     local_bh_all_ps     TRUE
-  ## 9: 0.720  0.8375000       0.076       spending             none     local_bh_all_ps     TRUE
-
-  ## So, worth exploring all alpha_methods, final_adj_methods, and
-  ## local_hommel, and local_bh, and local_unadj. Maybe also explore both with
-  ## and without data splitting (idea is that one might imaging testing
-  ## components of an index --- say an inde x with 10 variables in it. So we
-  ## are not data splitting.)
 
   ## Compare to a situation with more k and more opportunities for ungating (t=.5)
 
@@ -241,8 +215,8 @@ test_that("simulating many p-values does what we expect", {
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
       n_sim = n_sims, t = .5, k = 10, max_level = 4,
-      alpha = 0.05, N_total = 1000, beta_base = 0.1,
-      adj_effN = x$adj_effN,
+      alpha = 0.05, N_total = 1000, effect_size = 0.5,
+      power_decay = x$power_decay,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
@@ -268,53 +242,31 @@ test_that("simulating many p-values does what we expect", {
     dplyr::select(one_of(c("power", "leaf_power", "false_error", parm_nms))) %>%
     arrange(desc(power), false_error)
 
-  ## local_hommel_all_ps wins in general with some local_unadj. Let's look for the set of approaches
-  ## that we'd like to send to a bigger simulation
-
   ## What about with alpha fixed and no final adjustment? (the original idea)
   ## Below we see that we need data splitting and local hommel
   res_t_half_ok_fwer %>%
     filter(final_adj_method == "none" & alpha_method == "fixed") %>%
     dplyr::select(one_of(c("power", "leaf_power", "false_error", parm_nms))) %>%
     arrange(desc(power), false_error)
-  ##
-  ##       power leaf_power false_error alpha_method final_adj_method    local_adj_method adj_effN
-  ##       <num>      <num>       <num>       <char>           <char>              <char>   <lgcl>
-  ## 1: 0.7160000  1.0000000       0.000        fixed             none local_hommel_all_ps     TRUE
-  ## 2: 0.4154847  0.3525777       0.005        fixed             none         local_simes     TRUE
 
   ## What among those without a final adjustment method but with a varying alpha and a version of sample splitting
   ## local_simes is clearly worst so exclude here
   res_t_half_ok_fwer %>%
-    filter(final_adj_method == "none" & alpha_method != "fixed" & adj_effN & local_adj_method != "local_simes") %>%
+    filter(final_adj_method == "none" & alpha_method != "fixed" & power_decay & local_adj_method != "local_simes") %>%
     dplyr::select(one_of(c("power", "leaf_power", "false_error", parm_nms))) %>%
     arrange(desc(power), false_error)
-  ##
-  ##    power leaf_power false_error   alpha_method final_adj_method    local_adj_method adj_effN
-  ##    <num>      <num>       <num>         <char>           <char>              <char>   <lgcl>
-  ## 1: 0.756  1.0000000       0.000    fixed_k_adj             none local_hommel_all_ps     TRUE
-  ## 2: 0.749  0.9989474       0.044 adaptive_k_adj             none  local_unadj_all_ps     TRUE
-  ## 3: 0.734  0.5714286       0.001       spending             none local_hommel_all_ps     TRUE
-  ## 4: 0.728        NaN       0.000 adaptive_k_adj             none local_hommel_all_ps     TRUE
-  ## 5: 0.723  0.8666667       0.002      investing             none local_hommel_all_ps     TRUE
 
   ## What about using  a final global adjustment?
 
   res_t_half_ok_fwer %>%
-    filter(final_adj_method != "none" & adj_effN & local_adj_method != "local_simes") %>%
+    filter(final_adj_method != "none" & power_decay & local_adj_method != "local_simes") %>%
     dplyr::select(one_of(c("power", "leaf_power", "false_error", parm_nms))) %>%
     arrange(desc(power), false_error)
-
-  ## This suggests:
-
-  ## (1) you can avoid local_adj_methods across all children if you use the adaptive_k_adj and sample splitting.
-  ## (2) with no final global adjustment, you can have power with any of the above alpha methods (fixed and local_hommel), but also different alpha methods have slightly more power.
-  ## (3) the final global adjustment also works with a wide variety of alpha_methods and including local adjustment methods.
 
   ## So let us inspect the following the best ideas for the broader sim to look at changes with k and l and t
   alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
   final_adj_methods <- c("none", "fdr", "fwer")
   local_adj_methods <- c("local_hommel_all_ps", "local_unadj_all_ps")
-  adj_effN <- c(TRUE, FALSE)
+  power_decay_vals <- c(TRUE, FALSE)
   ## and vary k, l, and t
 })

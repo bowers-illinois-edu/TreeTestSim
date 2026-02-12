@@ -1,94 +1,125 @@
 # HANDOFF.md
 
-Session date: 2026-02-04
+Session date: 2026-02-11
 
 ## Summary
 
-This session focused on two tasks: (1) creating initial `CLAUDE.md` documentation for the TreeTestSim R package, and (2) fixing all warnings from `make check`.
+This session replaced the opaque `beta_base` parameter in the abstract tree simulation functions with `effect_size` (Cohen's d), a parameter with direct scientific interpretation. This was a breaking API change touching both core simulation functions, all test files, documentation, and metadata.
 
 ## Key Decisions Made
 
-1. **CLAUDE.md structure**: Created a comprehensive guide covering the dual-framework architecture (abstract tree simulations vs. concrete block-randomized experiments), development commands, and key dependencies. Added a "Related Projects" section linking to `~/repos/manytests-paper` and `~/repos/manytestsr`.
+1. **Cohen's d as the new parameterization**: `effect_size` represents the standardized mean difference at each non-null leaf. Combined with `N_total` and the tree structure (which determines per-level sample size as `N_total / k^level`), power at every tree level derives automatically. The math: `power = Phi(d * sqrt(N/4) - z_{alpha/2})`, then `beta_param = log(power) / log(alpha)` (since `P(Beta(a,1) < alpha) = alpha^a`).
 
-2. **Coding preferences**: Referenced `CLAUDE_CODING.md` in the main `CLAUDE.md` rather than duplicating content. Key points: read broadly before changes, prefer boring code over clever, comment why not what, write tests that verify statistical principles, pause for review at checkpoints.
+2. **`power_decay` replaces `adj_effN`**: Same default behavior (`TRUE`), but the new name describes what it does: when TRUE, deeper levels have weaker signal because per-node sample size shrinks. When FALSE, root-level power applies at all depths.
 
-3. **Global variables approach**: Used `utils::globalVariables()` in a new `R/zzz.R` file to declare all data.table column names, rather than adding `# nolint` comments or other per-file solutions.
+3. **Removed dead parameters**: `effN` was always passed as `N_total` and never varied independently. `delta_hat` was an intermediate value users shouldn't control directly — it's now derived internally as `effect_size / 2` for the adaptive alpha schedule.
 
-4. **Stats imports**: Centralized all stats imports in `R/zzz.R` using the `"_PACKAGE"` roxygen pattern rather than distributing `@importFrom` across individual function files.
+4. **`derive_delta_hat()` replaced by `effect_size_to_beta()`**: The old function converted beta_base → power → delta_hat (an intermediate). The new function goes directly from Cohen's d → power → beta parameter, eliminating the confusing round-trip through `derive_delta_hat`.
+
+5. **`root_power` added to output**: The theoretical power at the root level is now included in `sim_res`, making simulation results immediately interpretable.
+
+6. **Added `importFrom(stats, pnorm, qnorm)`**: The new `effect_size_to_beta()` and the `root_power` computation in `simulate_test_DT()` use `pnorm`/`qnorm` directly. R CMD check flagged this as a missing import; resolved by adding `@importFrom` to the roxygen block.
 
 ## Files Changed and Why
 
 ### New Files
 
-- **`CLAUDE.md`**: Project documentation for Claude Code instances. Covers package overview, related projects, coding preferences reference, development commands, architecture, key dependencies, testing notes, and data structures.
-
-- **`R/zzz.R`**: Package-level declarations to satisfy R CMD check. Contains:
-  - `@importFrom stats ...` for all stats functions used (rnorm, runif, rbeta, sd, median, p.adjust, pbeta, qnorm, as.formula, setNames)
-  - `utils::globalVariables()` declaring all data.table column names used in NSE
+- **`tests/testthat/test_effect_size_param.R`**: 11 tests encoding the statistical principles the new parameterization must satisfy. Covers: hand-computed power matching, power decay with depth, root power formula, FWER control under null, power under alternative, monotonicity, `power_decay=FALSE` behavior, adaptive alpha schedule, all parameter combos, higher effect → more discoveries, and `root_power` in output.
 
 ### Modified Files
 
-- **`.Rbuildignore`**: Fixed multiple regex patterns that were incorrectly excluding files:
-  - `.local` → `^\.local$` (was matching `man/local_*.Rd` files!)
-  - `.git` → `^\.git$`
-  - `.lintr` → `^\.lintr$`
-  - `.vscode` → `^\.vscode$`
-  - Added `^\.claude$` to exclude the `.claude` directory
+- **`R/simulate_test.R`**: The main change.
+  - Removed `derive_delta_hat()` function entirely
+  - Added `effect_size_to_beta(effect_size, N_level, alpha)` — vectorized internal helper
+  - Rewrote `simulate_test_DT()` signature: removed `effN`, `beta_base`, `adj_effN`, `delta_hat`; added `effect_size`, `power_decay`
+  - Updated 4 locations in the body: root p-value generation, bottom-up leaf beta, adaptive alpha schedule, top-down loop
+  - Added `root_power` to `sim_res` output
+  - Added `@importFrom stats pnorm qnorm`
 
-- **`R/padj_sim_fns.R`**: Added missing `@param` documentation for:
-  - `padj_test_fn`: `return_bottom_up`
-  - `reveal_po_and_test`: `local_adj_p_fn`, `return_bottom_up`, `blocksize`, `bottom_up_adj`
-  - `reveal_po_and_test_siup`: `local_adj_p_fn`, `truevar_name`, `return_bottom_up`, `bottom_up_adj`
+- **`R/simulate_many_runs.R`**: Updated signature (removed `beta_base`, `adj_effN`; added `effect_size`, `power_decay`) and the inner call to `simulate_test_DT()`.
 
-- **`NAMESPACE`**: Regenerated by roxygen2 to include new stats imports.
+- **`tests/testthat/test_adaptive_power_method.R`**: All calls updated from `beta_base=0.1, effN=1000` to `effect_size=0.5`. Removed `derive_delta_hat`-specific tests (3 tests removed). Remaining tests verify adaptive_power method, dual bottom-up columns, backward-compatible output columns.
 
-- **`man/*.Rd`**: Several Rd files regenerated by roxygen2 with new parameter documentation.
+- **`tests/testthat/test_general.R`**: All `simulate_test_DT` and `simulate_many_runs_DT` calls updated. Parameter grid changed from `adj_effN = c(TRUE, FALSE)` to `power_decay = c(TRUE, FALSE)`. Data.table subset expressions updated accordingly (e.g., `!(adj_effN)` → `!(power_decay)`).
+
+- **`tests/testthat/tests.notforCRAN.R`**: Same parameter updates as test_general.R. These tests are skipped by default (`skip()`) because they run 1000 simulations across many parameter combinations.
+
+- **`DESCRIPTION`**: Version bumped from `0.0.0.9201` to `0.0.0.9300`.
+
+- **`NEWS.md`**: Added new section documenting breaking changes (removed parameters, new parameters) and new features (root_power, effect_size_to_beta).
+
+- **`NAMESPACE`**: Regenerated by roxygen2 to include `importFrom(stats, pnorm, qnorm)`.
+
+### Deleted Files
+
+- **`man/derive_delta_hat.Rd`**: Removed because the function was deleted.
+
+### Generated/Updated by roxygen2
+
+- **`man/effect_size_to_beta.Rd`**: New documentation for the replacement helper
+- **`man/simulate_test_DT.Rd`**: Updated with new parameter documentation
+- **`man/simulate_many_runs_DT.Rd`**: Updated with new parameter documentation
 
 ## Current Blockers or Open Questions
 
-1. **renv out-of-sync**: Every R command shows "The project is out-of-sync -- use `renv::status()` for details." This doesn't affect package functionality but may indicate dependency issues. The user may want to run `renv::restore()` or `renv::snapshot()`.
+1. **renv out-of-sync**: Still present from previous session. Every R command shows "The project is out-of-sync." Does not affect functionality.
 
-2. **CLAUDE.md NOTE**: R CMD check reports a NOTE about non-standard files (`CLAUDE.md`, `CLAUDE_CODING.md`) at top level. This is expected and acceptable—these are intentional project documentation files.
+2. **CLAUDE.md NOTE**: R CMD check still reports the pre-existing NOTE about non-standard top-level files.
 
-3. **Namespace conflict during install**: When attempting `devtools::install()`, there was a namespace conflict with rlang versions. This is an environment issue, not a package issue.
+3. **Equivalent `effect_size` for old `beta_base = 0.1`**: The plan noted that `beta_base = 0.1, N_total = 1000` corresponds to `effect_size ≈ 0.165`. All tests now use `effect_size = 0.5` instead, which is a moderate Cohen's d. If exact backward compatibility in simulation outputs is needed for any downstream analysis, the equivalent value would need to be computed via the inverse of `effect_size_to_beta`.
+
+4. **Downstream scripts**: Any scripts outside the package that call `simulate_test_DT()` or `simulate_many_runs_DT()` with the old parameter names will break. The `~/repos/manytests-paper` project may have such scripts.
 
 ## Important Context to Preserve
 
-### Package Architecture
+### The Core Math
 
-TreeTestSim has two parallel testing frameworks:
+```
+Cohen's d at leaf → power at any level → Beta shape parameter:
 
-1. **Abstract simulations** (`simulate_test_DT`, `simulate_many_runs_DT`): Uses beta-distributed p-values to simulate hierarchical testing without real data. Key insight: p-values are constrained to be monotonically non-decreasing down the tree.
+Power at level l = Phi(d * sqrt(N_total / (4 * k^l)) - z_{alpha/2})
+Beta shape a    = log(power) / log(alpha)
+delta_hat       = effect_size / 2    (for compute_adaptive_alphas)
+```
 
-2. **Concrete experiments** (`padj_test_fn`, `reveal_po_and_test_siup`): Works with actual individual-level data via `manytestsr::find_blocks`. Uses `lvls_fac` encoding ("2.5.14") to represent tree ancestry.
+The clamping in `effect_size_to_beta` is important: power must stay in `(alpha, 1)` to produce valid beta parameters in `(0, 1)`. Below `alpha` means no detectable signal; at exactly 1 the beta parameter hits 0.
 
-### Critical `.Rbuildignore` Lesson
+### Parameter Mapping (Old → New)
 
-The pattern `.local` in `.Rbuildignore` was matching `man/local_*.Rd` because in regex, `.` matches any character. This caused the local_simes, local_hommel_all_ps, etc. documentation to be excluded from the built package, triggering "undocumented code objects" warnings even though the .Rd files existed on disk. Always anchor patterns: `^\.local$` not `.local`.
+| Old | New | Notes |
+|-----|-----|-------|
+| `beta_base` | `effect_size` | Different scale; not a simple rename |
+| `effN` | *(removed)* | Was always equal to `N_total` |
+| `adj_effN` | `power_decay` | Same TRUE/FALSE semantics |
+| `delta_hat` | *(removed)* | Derived internally as `effect_size / 2` |
 
-### Relationship to Other Projects
+### Test Results
 
-- `~/repos/manytests-paper`: The academic paper motivating the methods
-- `~/repos/manytestsr`: The user-facing implementation package
-- TreeTestSim provides simulation evidence validating both
+- `devtools::test()`: **773 passed**, 0 failed, 0 warnings, 3 skipped (long-running sims)
+- `devtools::check()`: **0 errors, 0 warnings**, 1 pre-existing note
 
 ## What's Done vs. What Remains
 
 ### Done
 
-- [x] Created `CLAUDE.md` with package overview, architecture, commands
-- [x] Added "Related Projects" section linking to paper and manytestsr
-- [x] Added reference to `CLAUDE_CODING.md` for coding preferences
-- [x] Fixed all R CMD check warnings (was 2 warnings, now 0)
-- [x] Fixed `.Rbuildignore` regex patterns
-- [x] Added `R/zzz.R` with global variable declarations and stats imports
-- [x] Added missing `@param` documentation for simulation functions
-- [x] Regenerated documentation with `make document`
-- [x] Verified `make check` passes with 0 errors, 0 warnings, 1 note
+- [x] New test file `test_effect_size_param.R` with 11 statistical principle tests
+- [x] `effect_size_to_beta()` helper function
+- [x] `simulate_test_DT()` rewritten with new signature and body
+- [x] `simulate_many_runs_DT()` updated
+- [x] `derive_delta_hat()` removed entirely
+- [x] All existing test files updated (test_general.R, test_adaptive_power_method.R, tests.notforCRAN.R)
+- [x] `root_power` added to sim_res output
+- [x] Documentation regenerated, old Rd file deleted
+- [x] DESCRIPTION bumped to 0.0.0.9300
+- [x] NEWS.md updated with breaking changes
+- [x] `importFrom(stats, pnorm, qnorm)` added to resolve R CMD check NOTE
+- [x] `devtools::test()` passes (773/773)
+- [x] `devtools::check()` passes (0 errors, 0 warnings)
 
 ### Remains / Future Work
 
-- [ ] Consider adding CLAUDE.md and CLAUDE_CODING.md to `.Rbuildignore` if the NOTE is bothersome (currently acceptable)
-- [ ] Address renv out-of-sync status if it causes issues
-- [ ] The `tests.notforCRAN.R` file contains time-consuming FWER simulations that are skipped by default—these could be run periodically to verify statistical properties
-- [ ] Consider whether `R/zzz.R` global variables list needs updating as new data.table columns are added in future development
+- [ ] Check `~/repos/manytests-paper` for scripts that call the old API and update them
+- [ ] Consider running the skipped long-running FWER tests (`tests.notforCRAN.R`) to verify statistical properties with the new parameterization
+- [ ] The `CLAUDE.md` project documentation should be updated to reflect the new parameter names (currently references `beta_base` and `adj_effN` in the architecture section)
+- [ ] Consider whether `effect_size = 0.5` is the best default for `simulate_many_runs_DT()` (currently set there; previously `beta_base` defaulted to 0.1)
+- [ ] Changes have not been committed to git

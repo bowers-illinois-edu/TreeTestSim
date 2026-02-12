@@ -44,14 +44,14 @@ test_that("generate_tree_DT propagates nonnull flags correctly for extreme t", {
 })
 
 test_that("simulate_test_DT produces monotonic p-values", {
-  # We simulate a small tree and verify that each child’s p-value is at least that of its parent.
+  # We simulate a small tree and verify that each child's p-value is at least that of its parent.
   set.seed(1234)
   max_level <- 3
   k <- 3
   t <- 0.5
   tree_dt <- generate_tree_DT(max_level, k, t)
   res <- simulate_test_DT(tree_dt,
-    alpha = 0.05, k = k, effN = 1000, N_total = 1000, beta_base = 0.1,
+    alpha = 0.05, k = k, N_total = 1000, effect_size = 0.5,
     local_adj_p_fn = local_simes, global_adj = "hommel", return_details = TRUE,
     alpha_method = "fixed", final_global_adj = "none"
   )
@@ -69,11 +69,9 @@ test_that("simulate_test_DT produces monotonic p-values", {
   expect_true(all(children$p_val >= children$parent_p, na.rm = TRUE))
 
   ## Check that this holds when we allow alpha to vary
-  ## TODO: I say "spending" here but I'm doing something specific that I think it not exactly
-  ## the same. Also this means that I'm ignoring some of the spend_frac, etc.. arguments
   set.seed(1234)
   res_spend <- simulate_test_DT(tree_dt,
-    alpha = 0.05, k = k, effN = 1000, N_total = 1000, beta_base = 0.1,
+    alpha = 0.05, k = k, N_total = 1000, effect_size = 0.5,
     local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = TRUE, alpha_method = "spending"
   )
 
@@ -91,7 +89,7 @@ test_that("simulate_test_DT produces monotonic p-values", {
   ### Now try the less conservative approach
   set.seed(1234)
   res_invest <- simulate_test_DT(tree_dt,
-    alpha = 0.05, k = k, effN = 1000, N_total = 1000, beta_base = 0.1,
+    alpha = 0.05, k = k, N_total = 1000, effect_size = 0.5,
     local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = TRUE, alpha_method = "investing"
   )
 
@@ -110,7 +108,7 @@ test_that("simulate_test_DT produces monotonic p-values", {
   ## And the more conservative approach
   set.seed(1234)
   res_fixed_adj <- simulate_test_DT(tree_dt,
-    alpha = 0.05, k = k, effN = 1000, N_total = 1000, beta_base = 0.1,
+    alpha = 0.05, k = k, N_total = 1000, effect_size = 0.5,
     local_adj_p_fn = local_hommel_all_ps, global_adj = "hommel", return_details = TRUE, alpha_method = "fixed_k_adj"
   )
 
@@ -151,7 +149,7 @@ test_that("simulate_test_DT gates branches when the local adjusted p-value excee
 
   ## recall that the mean of a beta distribution is a/(a+1)
   set.seed(12357)
-  res <- simulate_test_DT(tree_dt, alpha = 0.05, k = k, effN = 1000, N_total = 1000, beta_base = 0.1)
+  res <- simulate_test_DT(tree_dt, alpha = 0.05, k = k, N_total = 1000, effect_size = 0.5)
 
   dt_sim <- res$treeDT
 
@@ -165,8 +163,8 @@ test_that("simulate_test_DT gates branches when the local adjusted p-value excee
   ## check using the hommel adjustment too
   set.seed(12357)
   res <- simulate_test_DT(tree_dt,
-    alpha = 0.05, k = k, effN = 1000,
-    N_total = 1000, beta_base = 0.1, local_adj_p_fn = local_hommel_all_ps
+    alpha = 0.05, k = k,
+    N_total = 1000, effect_size = 0.5, local_adj_p_fn = local_hommel_all_ps
   )
 
   dt_sim <- res$treeDT
@@ -185,13 +183,13 @@ test_that("simulate_test_DT gates branches when the local adjusted p-value excee
 alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
 final_adj_methods <- c("none", "fdr", "fwer")
 local_adj_methods <- c("local_simes", "local_hommel_all_ps", "local_bh_all_ps", "local_unadj_all_ps")
-adj_effN <- c(TRUE, FALSE)
+power_decay_vals <- c(TRUE, FALSE)
 
 parms <- as.data.table(expand.grid(
   alpha_method = alpha_methods,
   final_adj_method = final_adj_methods,
   local_adj_method = local_adj_methods,
-  adj_effN = adj_effN,
+  power_decay = power_decay_vals,
   stringsAsFactors = FALSE
 ))
 parms[, idx := seq_len(nrow(parms))]
@@ -204,8 +202,8 @@ test_that("All arguments work. No errors", {
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
       n_sim = 5, t = 0, k = 3, max_level = 3,
-      alpha = 0.05, N_total = 1000, beta_base = 0.1,
-      adj_effN = x$adj_effN,
+      alpha = 0.05, N_total = 1000, effect_size = 0.5,
+      power_decay = x$power_decay,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
@@ -221,8 +219,8 @@ test_that("All arguments work. No errors", {
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
       n_sim = 5, t = 1, k = 3, max_level = 3,
-      alpha = 0.05, N_total = 1000, beta_base = 0.1,
-      adj_effN = x$adj_effN,
+      alpha = 0.05, N_total = 1000, effect_size = 0.5,
+      power_decay = x$power_decay,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
@@ -238,8 +236,8 @@ test_that("All arguments work. No errors", {
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
       n_sim = 5, t = .5, k = 3, max_level = 3,
-      alpha = 0.05, N_total = 1000, beta_base = 0.1,
-      adj_effN = x$adj_effN,
+      alpha = 0.05, N_total = 1000, effect_size = 0.5,
+      power_decay = x$power_decay,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
@@ -277,8 +275,8 @@ test_that("simulating many p-values does what we expect", {
     message(paste(c(i, x[1, ]), collapse = " "))
     tmp <- simulate_many_runs_DT(
       n_sim = n_sims, t = 0, k = 3, max_level = 3,
-      alpha = 0.05, N_total = 1000, beta_base = 0.1,
-      adj_effN = x$adj_effN,
+      alpha = 0.05, N_total = 1000, effect_size = 0.5,
+      power_decay = x$power_decay,
       local_adj_p_fn = getFromNamespace(x[["local_adj_method"]], ns = "TreeTestSim"),
       global_adj = "hommel",
       return_details = FALSE,
@@ -303,11 +301,11 @@ test_that("simulating many p-values does what we expect", {
   ## FWER when t=0 or t=1 (which has no errors anyway and is only shown here
   ## for completeness)
 
-  expect_lt(max(res_t0[!(adj_effN), false_error]), .05 + sim_err)
+  expect_lt(max(res_t0[!(power_decay), false_error]), .05 + sim_err)
   ## And we don't have to use any local control, or any other tactic. Monotonicity, validity (i.e. p~U()), and gating are all we need
   expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps", false_error]), .05 + sim_err)
-  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(adj_effN) & final_adj_method == "none", false_error]), .05 + sim_err)
-  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(adj_effN) & final_adj_method == "none" & alpha_method == "fixed", false_error]), .05 + sim_err)
+  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(power_decay) & final_adj_method == "none", false_error]), .05 + sim_err)
+  expect_lt(max(res_t0[local_adj_method == "local_unadj_all_ps" & !(power_decay) & final_adj_method == "none" & alpha_method == "fixed", false_error]), .05 + sim_err)
 
   ## Check on the bottom up approach
   expect_lt(max(res_t0$bottom_up_false_error), .05 + sim_err)

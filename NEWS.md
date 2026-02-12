@@ -1,3 +1,33 @@
+# TreeTestSim 0.0.0.9300
+
+## Breaking changes
+
+* `simulate_test_DT()` and `simulate_many_runs_DT()` now parameterize
+  non-null p-value generation via `effect_size` (Cohen's d) instead of
+  `beta_base`. The new parameter has a direct scientific interpretation: it
+  is the standardized mean difference at each non-null leaf. Together with
+  `N_total` and the tree structure, power at every level is derived
+  automatically.
+
+* Removed `beta_base`, `effN`, `adj_effN`, and `delta_hat` parameters from
+  `simulate_test_DT()`. Removed `beta_base` and `adj_effN` from
+  `simulate_many_runs_DT()`. The old `adj_effN` logical is replaced by
+  `power_decay` (same default behavior: `TRUE`).
+
+* Removed internal helper `derive_delta_hat()`. Its role is replaced by
+  `effect_size_to_beta()`, which converts Cohen's d directly to a Beta shape
+  parameter without the intermediate round-trip.
+
+## New features
+
+* `simulate_test_DT()` now returns `root_power` in `sim_res` — the
+  theoretical power at the root level computed from `effect_size` and
+  `N_total`.
+
+* New internal helper `effect_size_to_beta(effect_size, N_level, alpha)`
+  converts Cohen's d at a given sample size to the Beta(a, 1) shape
+  parameter used for p-value generation.
+
 # TreeTestSim 0.0.0.9201
 
 ## Bug fixes

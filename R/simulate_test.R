@@ -1,19 +1,25 @@
-#' Derive delta_hat from beta_base and N_total
+#' Convert Cohen's d to a Beta distribution shape parameter
 #'
-#' Matches root-level power between the beta DGP used in abstract simulations
-#' and the normal power formula used by compute_adaptive_alphas.
+#' Given an effect size (Cohen's d), a sample size, and a significance level,
+#' computes the Beta(a, 1) shape parameter \code{a} such that
+#' \code{P(Beta(a,1) < alpha) = power}, where power comes from the normal
+#' approximation for a two-sample test.
 #'
-#' @param beta_base Numeric. The base parameter for the beta distribution.
-#' @param N_total Numeric. The total sample size at the root.
+#' @param effect_size Numeric. Cohen's d at each non-null leaf.
+#' @param N_level Numeric (scalar or vector). Sample size at the relevant
+#'   tree level.
 #' @param alpha Numeric. The nominal significance level.
-#' @return A positive numeric scalar: the equivalent delta_hat.
+#' @return A numeric vector of Beta shape parameters (one per element of
+#'   \code{N_level}).
 #' @keywords internal
-derive_delta_hat <- function(beta_base, N_total, alpha = 0.05) {
-  root_power <- pbeta(alpha, beta_base, 1)
-  # Clamp to avoid qnorm(0) or qnorm(1)
-  root_power <- max(min(root_power, 1 - 1e-10), 1e-10)
-  dhat <- (qnorm(root_power) + qnorm(1 - alpha / 2)) / sqrt(N_total)
-  return(max(dhat, 1e-8))
+effect_size_to_beta <- function(effect_size, N_level, alpha = 0.05) {
+  z_crit <- qnorm(1 - alpha / 2)
+  power <- pnorm(effect_size * sqrt(N_level / 4) - z_crit)
+  # Clamp: power can't drop below alpha (would give beta >= 1, no signal)
+  # and can't hit exactly 1 (would give beta = 0)
+  power <- pmax(power, alpha + 1e-6)
+  power <- pmin(power, 1 - 1e-10)
+  log(power) / log(alpha)
 }
 
 #' Simulate the Testing Procedure on a k-ary Tree with Optional Alpha Spending/Investing
@@ -22,16 +28,16 @@ derive_delta_hat <- function(beta_base, N_total, alpha = 0.05) {
 #' This version of the simulation procedure incorporates an extra option for how the
 #' significance level is allocated along the tree. The user may choose:
 #' \itemize{
-#'   \item \code{"fixed"}: use the same significance level α at every node (as before),
-#'   \item \code{"spending"}: at each branch the available α is reduced by a fixed fraction,
-#'   \item \code{"investing"}: a simple α–investing scheme where rejections earn a bonus.
+#'   \item \code{"fixed"}: use the same significance level \eqn{\alpha} at every node (as before),
+#'   \item \code{"spending"}: at each branch the available \eqn{\alpha} is reduced by a fixed fraction,
+#'   \item \code{"investing"}: a simple \eqn{\alpha}-investing scheme where rejections earn a bonus.
 #' }
 #'
 #' In this implementation an extra column \code{alpha_alloc} is added to each node.
-#' The root is allocated the full α. Then, if a node is “active” (i.e. its p-value is below
+#' The root is allocated the full \eqn{\alpha}. Then, if a node is "active" (i.e. its p-value is below
 #' its allocated threshold) its children are tested at a level that depends on the chosen method:
 #' \itemize{
-#'   \item For \code{"fixed"}, each child inherits the full α,
+#'   \item For \code{"fixed"}, each child inherits the full \eqn{\alpha},
 #'   \item For \code{"fixed_k_adj"}, each child is tested at \code{alpha/(1+alpha k)} which should be conservative,
 #'   \item For \code{"adaptive_k_adj"}, each child is tested at \code{parent_p + (1-parent_p)(alpha/k)} which should be conservative,
 #'   \item For \code{"spending"}, the children are tested at level \code{parent_alpha + max((alpha-parent_p),0)/k},
@@ -41,10 +47,16 @@ derive_delta_hat <- function(beta_base, N_total, alpha = 0.05) {
 #' @param treeDT A data.table as produced by \code{generate_tree_DT()}.
 #' @param alpha Numeric. The nominal significance level.
 #' @param k Integer. The branching factor.
-#' @param effN Numeric. The effective sample size at the root.
 #' @param N_total Numeric. The total sample size at the root.
-#' @param beta_base Numeric. The base parameter for the beta distribution.
-#' @param adj_effN Logical. Whether to adjust the effective sample size at deeper levels.
+#' @param effect_size Numeric. Cohen's d — the standardized effect size at
+#'   each non-null leaf. Together with \code{N_total} and the tree structure,
+#'   this determines power at every level of the tree.
+#' @param power_decay Logical. If \code{TRUE} (default), the strength of
+#'   non-null p-value generation decreases at deeper levels (reflecting the
+#'   smaller per-node sample size \code{N_total / k^level}). If \code{FALSE},
+#'   the root-level power is used at all depths — useful for modeling
+#'   situations where the effect size itself grows to compensate for smaller
+#'   samples.
 #' @param local_adj_p_fn Function. A function that adjusts p-values at a node (e.g. \code{local_simes}).
 #' @param global_adj Character. The method to adjust the leaves (e.g. "hommel").
 #' @param alpha_method Character. One of \code{"fixed"}, \code{"spending"},
@@ -55,80 +67,55 @@ derive_delta_hat <- function(beta_base, N_total, alpha = 0.05) {
 #'   tree.
 #' @param return_details Logical. Whether to return the full simulated data.table.
 #' @param final_global_adj Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}.
-#' @param delta_hat Numeric or NULL. Estimated standardized effect size for
-#'   \code{alpha_method = "adaptive_power"}. If NULL (default), derived
-#'   automatically from \code{beta_base} and \code{N_total} by matching root
-#'   power. Ignored for other alpha methods.
+#' @param monotonicity Logical. TRUE if we require child nodes p-values to be
+#'   no larger than those of parent nodes. FALSE child nodes could have smaller
+#'   p-values.
 #' @param tau Numeric. Cumulative power threshold for
 #'   \code{alpha_method = "adaptive_power"} (default 0.1). When cumulative
 #'   power drops below tau, natural gating is deemed sufficient and nominal
 #'   alpha is used. Ignored for other alpha methods.
-
-#' @param monotonicity Logical. TRUE if we require child nodes p-values to be
-#' no larger than those of parent nodes. FALSE child nodes could have smaller
-#' p-values.
-
 #'
 #' @return A list with components:
 #' \describe{
 #'   \item{treeDT}{The data.table augmented with columns \code{p_val} and \code{alpha_alloc}.}
-#'   \item{sim_res}{A data.table summarizing error rates and discoveries.}
+#'   \item{sim_res}{A data.table summarizing error rates, discoveries, and
+#'     \code{root_power} (the theoretical power at the root level).}
 #' }
 #' @examples
 #' dt <- generate_tree_DT(max_level = 3, k = 3, t = 0.2)
 #' res <- simulate_test_DT(dt,
-#'   alpha = 0.05, k = 3, effN = 1000, N_total = 1000,
-#'   beta_base = 0.1, alpha_method = "spending", return_details = TRUE
+#'   alpha = 0.05, k = 3, N_total = 1000,
+#'   effect_size = 0.5, alpha_method = "spending", return_details = TRUE
 #' )
 #' @import data.table
+#' @importFrom stats pnorm qnorm
 #' @export
-simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
-                             adj_effN = TRUE, local_adj_p_fn = local_simes, global_adj = "hommel",
-                             alpha_method = "fixed", return_details = TRUE, final_global_adj = "none",
-                             monotonicity = TRUE, delta_hat = NULL, tau = 0.1) {
+simulate_test_DT <- function(treeDT, alpha, k, N_total, effect_size,
+                             power_decay = TRUE, local_adj_p_fn = local_simes,
+                             global_adj = "hommel",
+                             alpha_method = "fixed", return_details = TRUE,
+                             final_global_adj = "none",
+                             monotonicity = TRUE, tau = 0.1) {
   tree_sim <- copy(treeDT)
   tree_sim[, `:=`(p_val = NA_real_, alpha_alloc = NA_real_)]
   setkey(tree_sim, "node")
+
+  ## Root p-value: beta parameter from effect_size at full sample size
+  root_beta <- effect_size_to_beta(effect_size, N_total, alpha)
 
   tree_sim[node == 1, `:=`(
     alpha_alloc = alpha,
     p_val = fifelse(
       nonnull,
-      rbeta(1, beta_base, 1),
+      rbeta(1, root_beta, 1),
       runif(1, min = 0, max = 1)
     )
   )]
 
   max_level <- max(tree_sim$level)
 
-  # Bottom-up approach for comparison
-
-  ### TODO: So we should set minimum power for each leaf (like the power you'd
-  ### get with N_total/(k^max_level))
-  ## And then maxpower at the overall test which is a function of
-  ## pbeta(.05,a,1). Say, we set overall power at pbeta(alpha,a,1) choosing an
-  ## a such that this equals .8, then we ask, say, what the N would have to be
-  ## for this for a t-test maybe??? Basically, we can have minimum power (say,
-  ## imagine relatively large leaves, say N=50, with 25 treated and 25
-  ## controls, so pbeta(.05,a,1)==blah where blah is the power of a t.test like
-  ## power.t.test()). For example,
-  ## power.t.test(delta=.8,sd=1,sig.level=.05,n=25) -> power=.8 imagine for the
-  ## sake of these simulations that no block has fewer than that. So we get
-  ## num_leaves*(25*2) as the total size of the N in the dataset. And this
-  ## determines the top level power. At each split we divide the N_node/k ->
-  ## convert to t.test power Effect at each node is the size weighted average
-  ## of the block averages of that block (for delta, assume sd=1).
-
-  ## Power-calibrated beta for leaf-level bottom-up comparison.
-  ## Convert beta_base to effect size, compute power at leaf sample size,
-  ## then convert back to beta parameter.
-  delta_hat_bu <- derive_delta_hat(beta_base, N_total, alpha)
-  n_leaves <- N_total / (k^max_level)
-  z_crit_bu <- qnorm(1 - alpha / 2)
-  power_leaves <- pnorm(delta_hat_bu * sqrt(n_leaves) - z_crit_bu)
-  power_leaves <- max(power_leaves, alpha + 1e-6)
-  power_leaves <- min(power_leaves, 1 - 1e-10)
-  eff_beta_leaves <- log(power_leaves) / log(alpha)
+  # Bottom-up approach for comparison: use leaf-level sample size
+  eff_beta_leaves <- effect_size_to_beta(effect_size, N_total / (k^max_level), alpha)
   tree_sim[level == max_level, p_sim := fifelse(
     nonnull,
     rbeta(.N, eff_beta_leaves, 1),
@@ -158,17 +145,11 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
 
   # Precompute adaptive alpha schedule if needed
   if (alpha_method == "adaptive_power") {
-    if (is.null(delta_hat)) {
-      delta_hat <- derive_delta_hat(beta_base, N_total, alpha)
-    }
     alpha_schedule <- manytestsr::compute_adaptive_alphas(
-      k = k, delta_hat = delta_hat, N_total = N_total,
+      k = k, delta_hat = effect_size / 2, N_total = N_total,
       tau = tau, max_depth = max_level + 1L, thealpha = alpha
     )
   }
-
-  ## Pre-compute delta_hat for power-calibrated beta in the top-down loop
-  delta_hat_local <- derive_delta_hat(beta_base, N_total, alpha)
 
   # Top-down procedure
   for (l in 1:max_level) {
@@ -205,27 +186,16 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
       child_rows <- tree_sim[parent == parent_node & level == l]
       if (nrow(child_rows) == 0) next
 
-      ## Power-calibrated beta parameter for data splitting.
-      ## At level l, sample size is N_total / k^l. We convert beta_base
-      ## to an equivalent effect size via the normal model, compute power
-      ## at the reduced sample size, then convert back to a beta parameter.
-      ## This ensures the simulation's power decay matches the normal
-      ## approximation used by compute_adaptive_alphas().
-      if (adj_effN) {
-        n_level <- N_total / (k^l)
-        z_crit <- qnorm(1 - alpha / 2)
-        power_level <- pnorm(delta_hat_local * sqrt(n_level) - z_crit)
-        ## Clamp: power can't drop below alpha (beta >= 1 means no power)
-        ## and can't exceed 1 - epsilon (beta must stay positive)
-        power_level <- max(power_level, alpha + 1e-6)
-        power_level <- min(power_level, 1 - 1e-10)
-        effective_beta <- log(power_level) / log(alpha)
+      ## Power-calibrated beta at this level
+      if (power_decay) {
+        effective_beta <- effect_size_to_beta(effect_size, N_total / (k^l), alpha)
       } else {
-        effective_beta <- beta_base
+        ## No decay: use root-level power at all depths
+        effective_beta <- root_beta
       }
 
       if (monotonicity) {
-        ## If we require that child nodes have equal to or higher p-values than parents:
+        ## Child p-values are at least as large as the parent's
         child_rows[is.na(p_sim), p_sim := fifelse(
           nonnull,
           parent_p + (1 - parent_p) * rbeta(.N, effective_beta, 1),
@@ -273,7 +243,6 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
     tree_sim[nonnull == TRUE & !is.na(p_val), alpha_alloc])
   power <- mean(tree_sim[nonnull == TRUE & !is.na(p_val), p_val] <=
     tree_sim[nonnull == TRUE & !is.na(p_val), alpha_alloc])
-  ## This is a test
   num_leaves_tested <- sum(tree_sim[level == max_level, !is.na(p_val)])
   if (num_leaves_tested > 0) {
     leaf_power <- mean(tree_sim[level == max_level & nonnull == TRUE & !is.na(p_val), p_val] <= alpha, na.rm = TRUE)
@@ -282,6 +251,9 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
     leaf_power <- NA
     leaf_disc <- NA
   }
+
+  # Theoretical power at the root level
+  root_power <- pnorm(effect_size * sqrt(N_total / 4) - qnorm(1 - alpha / 2))
 
   sim_res <- data.table(
     num_nodes_tested = num_nodes_tested,
@@ -301,7 +273,8 @@ simulate_test_DT <- function(treeDT, alpha, k, effN, N_total, beta_base,
     bu_hommel_power = bu_hommel_power,
     bu_bh_false_error = bu_bh_false_error,
     bu_bh_true_disc = bu_bh_true_disc,
-    bu_bh_power = bu_bh_power
+    bu_bh_power = bu_bh_power,
+    root_power = root_power
   )
 
   if (return_details) {

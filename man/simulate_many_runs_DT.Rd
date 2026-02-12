@@ -11,8 +11,8 @@ simulate_many_runs_DT(
   max_level,
   alpha,
   N_total,
-  beta_base = 0.1,
-  adj_effN = TRUE,
+  effect_size = 0.5,
+  power_decay = TRUE,
   local_adj_p_fn = local_simes,
   return_details = FALSE,
   global_adj = "hommel",
@@ -36,9 +36,13 @@ simulate_many_runs_DT(
 
 \item{N_total}{Numeric. The total sample size at the root.}
 
-\item{beta_base}{Numeric. The base parameter for the Beta distribution.}
+\item{effect_size}{Numeric. Cohen's d — the standardized effect size at
+each non-null leaf. Together with \code{N_total} and the tree structure,
+this determines power at every level.}
 
-\item{adj_effN}{Logical. Whether to adjust the effective sample size at deeper levels.}
+\item{power_decay}{Logical. If \code{TRUE} (default), non-null signal
+strength decreases at deeper levels. If \code{FALSE}, root-level power
+is used at all depths.}
 
 \item{local_adj_p_fn}{Function. A function (e.g. \code{local_simes}) to adjust p-values at a node.}
 

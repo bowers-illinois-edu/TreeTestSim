@@ -11,28 +11,31 @@
 #' @param max_level Integer. The maximum level (depth) of the tree.
 #' @param alpha Numeric. The nominal significance level.
 #' @param N_total Numeric. The total sample size at the root.
-#' @param beta_base Numeric. The base parameter for the Beta distribution.
-#' @param adj_effN Logical. Whether to adjust the effective sample size at deeper levels.
+#' @param effect_size Numeric. Cohen's d — the standardized effect size at
+#'   each non-null leaf. Together with \code{N_total} and the tree structure,
+#'   this determines power at every level.
+#' @param power_decay Logical. If \code{TRUE} (default), non-null signal
+#'   strength decreases at deeper levels. If \code{FALSE}, root-level power
+#'   is used at all depths.
 #' @param local_adj_p_fn Function. A function (e.g. \code{local_simes}) to adjust p-values at a node.
 #' @param return_details Logical. Whether to return the full simulated data.table.
 #' @param global_adj Character. The method to adjust the leaves (e.g. "hommel").
 #' @param alpha_method Character. One of \code{"fixed"}, \code{"spending"}, \code{"investing"}.
 #' @param final_global_adj Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}.
 #' @param multicore Logical. Whether to use multiple cores (via \code{parallel::mclapply}).
-
 #' @param monotonicity Logical. TRUE if we require child nodes p-values to be
-#' no larger than those of parent nodes. FALSE child nodes could have smaller
-#' p-values.
-
+#'   no larger than those of parent nodes. FALSE child nodes could have smaller
+#'   p-values.
 #' @param ... Additional arguments passed to \code{simulate_test_DT()}.
 #'
 #' @return A named numeric vector giving averaged error rates and discovery metrics across simulations.
 #'
 #' @importFrom parallel mclapply
 #' @export
-simulate_many_runs_DT <- function(n_sim, t, k, max_level, alpha, N_total, beta_base = 0.1,
-                                  adj_effN = TRUE, local_adj_p_fn = local_simes, return_details = FALSE,
-                                  global_adj = "hommel", alpha_method = "fixed", final_global_adj = "none", multicore = FALSE, monotonicity = TRUE, ...) {
+simulate_many_runs_DT <- function(n_sim, t, k, max_level, alpha, N_total, effect_size = 0.5,
+                                  power_decay = TRUE, local_adj_p_fn = local_simes, return_details = FALSE,
+                                  global_adj = "hommel", alpha_method = "fixed", final_global_adj = "none",
+                                  multicore = FALSE, monotonicity = TRUE, ...) {
   treeDT <- generate_tree_DT(max_level, k, t)
 
   if (multicore) {
@@ -45,10 +48,12 @@ simulate_many_runs_DT <- function(n_sim, t, k, max_level, alpha, N_total, beta_b
     seq_len(n_sim),
     function(i) {
       simulate_test_DT(treeDT, alpha, k,
-        effN = N_total, N_total = N_total, beta_base = beta_base,
-        adj_effN = adj_effN, local_adj_p_fn = local_adj_p_fn, global_adj = global_adj,
-        alpha_method = alpha_method, return_details = return_details,
-        final_global_adj = final_global_adj, monotonicity = monotonicity, ...
+        N_total = N_total, effect_size = effect_size,
+        power_decay = power_decay, local_adj_p_fn = local_adj_p_fn,
+        global_adj = global_adj, alpha_method = alpha_method,
+        return_details = return_details,
+        final_global_adj = final_global_adj,
+        monotonicity = monotonicity, ...
       )
     },
     mc.cores = ncores, mc.set.seed = TRUE

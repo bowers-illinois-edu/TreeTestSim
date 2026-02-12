@@ -8,17 +8,15 @@ simulate_test_DT(
   treeDT,
   alpha,
   k,
-  effN,
   N_total,
-  beta_base,
-  adj_effN = TRUE,
+  effect_size,
+  power_decay = TRUE,
   local_adj_p_fn = local_simes,
   global_adj = "hommel",
   alpha_method = "fixed",
   return_details = TRUE,
   final_global_adj = "none",
   monotonicity = TRUE,
-  delta_hat = NULL,
   tau = 0.1
 )
 }
@@ -29,13 +27,18 @@ simulate_test_DT(
 
 \item{k}{Integer. The branching factor.}
 
-\item{effN}{Numeric. The effective sample size at the root.}
-
 \item{N_total}{Numeric. The total sample size at the root.}
 
-\item{beta_base}{Numeric. The base parameter for the beta distribution.}
+\item{effect_size}{Numeric. Cohen's d — the standardized effect size at
+each non-null leaf. Together with \code{N_total} and the tree structure,
+this determines power at every level of the tree.}
 
-\item{adj_effN}{Logical. Whether to adjust the effective sample size at deeper levels.}
+\item{power_decay}{Logical. If \code{TRUE} (default), the strength of
+non-null p-value generation decreases at deeper levels (reflecting the
+smaller per-node sample size \code{N_total / k^level}). If \code{FALSE},
+the root-level power is used at all depths — useful for modeling
+situations where the effect size itself grows to compensate for smaller
+samples.}
 
 \item{local_adj_p_fn}{Function. A function that adjusts p-values at a node (e.g. \code{local_simes}).}
 
@@ -56,11 +59,6 @@ tree.}
 no larger than those of parent nodes. FALSE child nodes could have smaller
 p-values.}
 
-\item{delta_hat}{Numeric or NULL. Estimated standardized effect size for
-\code{alpha_method = "adaptive_power"}. If NULL (default), derived
-automatically from \code{beta_base} and \code{N_total} by matching root
-power. Ignored for other alpha methods.}
-
 \item{tau}{Numeric. Cumulative power threshold for
 \code{alpha_method = "adaptive_power"} (default 0.1). When cumulative
 power drops below tau, natural gating is deemed sufficient and nominal
@@ -70,23 +68,24 @@ alpha is used. Ignored for other alpha methods.}
 A list with components:
 \describe{
 \item{treeDT}{The data.table augmented with columns \code{p_val} and \code{alpha_alloc}.}
-\item{sim_res}{A data.table summarizing error rates and discoveries.}
+\item{sim_res}{A data.table summarizing error rates, discoveries, and
+\code{root_power} (the theoretical power at the root level).}
 }
 }
 \description{
 This version of the simulation procedure incorporates an extra option for how the
 significance level is allocated along the tree. The user may choose:
 \itemize{
-\item \code{"fixed"}: use the same significance level α at every node (as before),
-\item \code{"spending"}: at each branch the available α is reduced by a fixed fraction,
-\item \code{"investing"}: a simple α–investing scheme where rejections earn a bonus.
+\item \code{"fixed"}: use the same significance level \eqn{\alpha} at every node (as before),
+\item \code{"spending"}: at each branch the available \eqn{\alpha} is reduced by a fixed fraction,
+\item \code{"investing"}: a simple \eqn{\alpha}-investing scheme where rejections earn a bonus.
 }
 
 In this implementation an extra column \code{alpha_alloc} is added to each node.
-The root is allocated the full α. Then, if a node is “active” (i.e. its p-value is below
+The root is allocated the full \eqn{\alpha}. Then, if a node is "active" (i.e. its p-value is below
 its allocated threshold) its children are tested at a level that depends on the chosen method:
 \itemize{
-\item For \code{"fixed"}, each child inherits the full α,
+\item For \code{"fixed"}, each child inherits the full \eqn{\alpha},
 \item For \code{"fixed_k_adj"}, each child is tested at \code{alpha/(1+alpha k)} which should be conservative,
 \item For \code{"adaptive_k_adj"}, each child is tested at \code{parent_p + (1-parent_p)(alpha/k)} which should be conservative,
 \item For \code{"spending"}, the children are tested at level \code{parent_alpha + max((alpha-parent_p),0)/k},
@@ -96,7 +95,7 @@ its allocated threshold) its children are tested at a level that depends on the 
 \examples{
 dt <- generate_tree_DT(max_level = 3, k = 3, t = 0.2)
 res <- simulate_test_DT(dt,
-  alpha = 0.05, k = 3, effN = 1000, N_total = 1000,
-  beta_base = 0.1, alpha_method = "spending", return_details = TRUE
+  alpha = 0.05, k = 3, N_total = 1000,
+  effect_size = 0.5, alpha_method = "spending", return_details = TRUE
 )
 }
