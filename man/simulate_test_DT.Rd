@@ -16,8 +16,7 @@ simulate_test_DT(
   alpha_method = "fixed",
   return_details = TRUE,
   final_global_adj = "none",
-  monotonicity = TRUE,
-  tau = 0.1
+  monotonicity = TRUE
 )
 }
 \arguments{
@@ -58,11 +57,6 @@ tree.}
 \item{monotonicity}{Logical. TRUE if we require child nodes p-values to be
 no larger than those of parent nodes. FALSE child nodes could have smaller
 p-values.}
-
-\item{tau}{Numeric. Cumulative power threshold for
-\code{alpha_method = "adaptive_power"} (default 0.1). When cumulative
-power drops below tau, natural gating is deemed sufficient and nominal
-alpha is used. Ignored for other alpha methods.}
 }
 \value{
 A list with components:

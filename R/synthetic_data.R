@@ -121,8 +121,8 @@ generate_synthetic_experiment <- function(k, max_level, N_per_block = 50L,
 #' @param nsims Integer. Number of randomization reruns per method (default 200).
 #' @param ncores_sim Integer. Number of cores for parallel reruns (default 1).
 #' @param thealpha Numeric. Nominal significance level (default 0.05).
-#' @param adaptive_tau Numeric. Power threshold for the adaptive alpha method
-#'   (default 0.1).
+#' @param adaptive_tau Deprecated, ignored. The error load check in
+#'   \code{compute_adaptive_alphas} replaces the old tau threshold.
 #' @param methods Character vector. Which methods to run. Default: all six.
 #'
 #' @return A data.table with one row per method, containing columns
@@ -146,7 +146,7 @@ run_synthetic_comparison <- function(idat, bdat, k, max_level,
   adaptive_afn <- NULL
   if (any(grepl("td_adaptive", methods))) {
     adaptive_afn <- manytestsr::alpha_adaptive(
-      k = k, delta_hat = max(tau_size, 0.01), N_total = N_total, tau = adaptive_tau
+      k = k, delta_hat = max(tau_size, 0.01), N_total = N_total
     )
   }
 

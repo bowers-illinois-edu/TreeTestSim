@@ -70,10 +70,6 @@ effect_size_to_beta <- function(effect_size, N_level, alpha = 0.05) {
 #' @param monotonicity Logical. TRUE if we require child nodes p-values to be
 #'   no larger than those of parent nodes. FALSE child nodes could have smaller
 #'   p-values.
-#' @param tau Numeric. Cumulative power threshold for
-#'   \code{alpha_method = "adaptive_power"} (default 0.1). When cumulative
-#'   power drops below tau, natural gating is deemed sufficient and nominal
-#'   alpha is used. Ignored for other alpha methods.
 #'
 #' @return A list with components:
 #' \describe{
@@ -95,7 +91,7 @@ simulate_test_DT <- function(treeDT, alpha, k, N_total, effect_size,
                              global_adj = "hommel",
                              alpha_method = "fixed", return_details = TRUE,
                              final_global_adj = "none",
-                             monotonicity = TRUE, tau = 0.1) {
+                             monotonicity = TRUE) {
   tree_sim <- copy(treeDT)
   tree_sim[, `:=`(p_val = NA_real_, alpha_alloc = NA_real_)]
   setkey(tree_sim, "node")
@@ -147,7 +143,7 @@ simulate_test_DT <- function(treeDT, alpha, k, N_total, effect_size,
   if (alpha_method == "adaptive_power") {
     alpha_schedule <- manytestsr::compute_adaptive_alphas(
       k = k, delta_hat = effect_size / 2, N_total = N_total,
-      tau = tau, max_depth = max_level + 1L, thealpha = alpha
+      max_depth = max_level + 1L, thealpha = alpha
     )
   }
 

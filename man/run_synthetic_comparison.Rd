@@ -47,8 +47,8 @@ treatment effect. When the synthetic data has a known non-null pattern
 
 \item{thealpha}{Numeric. Nominal significance level (default 0.05).}
 
-\item{adaptive_tau}{Numeric. Power threshold for the adaptive alpha method
-(default 0.1).}
+\item{adaptive_tau}{Deprecated, ignored. The error load check in
+\code{compute_adaptive_alphas} replaces the old tau threshold.}
 
 \item{methods}{Character vector. Which methods to run. Default: all six.}
 }
