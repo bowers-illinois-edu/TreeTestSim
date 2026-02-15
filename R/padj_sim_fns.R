@@ -82,6 +82,12 @@
 #' results from the bottom-up (test every block and adjust) approach for
 #' comparison with the top-down SIUP approach. Default is TRUE.
 
+#' @param non_null_blocks Name of a logical column in bdat indicating which
+#' blocks have non-zero effects. When provided, passed to
+#' \code{create_effects} so the same blocks are non-null across scenarios.
+#' When NULL (default), \code{create_effects} randomly assigns non-null blocks
+#' using \code{prop_blocks_0}.
+
 #' @return A pvalue for each block
 #' @import manytestsr
 #' @export
@@ -90,7 +96,8 @@ padj_test_fn <- function(idat, bdat, blockid, trtid = "trt", fmla = Y ~ trtF | b
                          pfn, afn, local_adj_p_fn = local_unadj_all_ps, p_adj_method, nsims, ncores = 1,
                          ncores_sim = 1, bottom_up_adj = "hommel",
                          splitfn = NULL, covariate = NULL, splitby = NULL, thealpha = .05, blocksize = "hwt",
-                         stop_splitby_constant = TRUE, return_details = FALSE, return_bottom_up = TRUE) {
+                         stop_splitby_constant = TRUE, return_details = FALSE, return_bottom_up = TRUE,
+                         non_null_blocks = NULL) {
   if (!is.null(afn) & is.character(afn)) {
     if (afn == "NULL") {
       afn <- NULL
@@ -121,10 +128,13 @@ padj_test_fn <- function(idat, bdat, blockid, trtid = "trt", fmla = Y ~ trtF | b
   }
 
   ## Create potential outcome to treatment using a tau_fn and tau_size etc.
+  ## When non_null_blocks is provided, those specific blocks get effects (others get zero).
+  ## When NULL, create_effects randomly selects (1 - prop_blocks_0) fraction as non-null.
   datnew$y1new <- create_effects(
     idat = datnew, ybase = ybase, blockid = blockid,
     tau_fn = tau_fn, tau_size = tau_size,
-    prop_blocks_0 = prop_blocks_0, covariate = covariate, by_block = by_block
+    prop_blocks_0 = prop_blocks_0, covariate = covariate, by_block = by_block,
+    non_null_blocks = non_null_blocks
   )
   datnew[, trueblocks := ifelse(abs(y1new - get(ybase)) <= .Machine$double.eps, 0, 1)]
   datnew[, trueate := mean(y1new - get(ybase)), by = blockid]

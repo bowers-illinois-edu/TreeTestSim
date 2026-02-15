@@ -16,8 +16,7 @@ simulate_test_DT(
   alpha_method = "fixed",
   return_details = TRUE,
   final_global_adj = "none",
-  monotonicity = TRUE,
-  tau = 0.1
+  monotonicity = TRUE
 )
 }
 \arguments{
@@ -58,12 +57,6 @@ tree.}
 \item{monotonicity}{Logical. TRUE if we require child nodes p-values to be
 no larger than those of parent nodes. FALSE child nodes could have smaller
 p-values.}
-
-\item{tau}{Numeric. Tuning parameter for
-\code{\link[manytestsr]{compute_adaptive_alphas}} (only used when
-\code{alpha_method = "adaptive_power"}). Smaller values produce more
-generous alpha at deeper levels; \code{tau = 1} yields the nominal alpha
-at every depth. Default is 0.1.}
 }
 \value{
 A list with components:

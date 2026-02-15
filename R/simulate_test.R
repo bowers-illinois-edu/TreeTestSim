@@ -65,11 +65,6 @@ effect_size_to_beta <- function(effect_size, N_level, alpha = 0.05) {
 #'   \code{\link[manytestsr]{compute_adaptive_alphas}} to precompute a
 #'   depth-indexed alpha schedule based on estimated power decay through the
 #'   tree.
-#' @param tau Numeric. Tuning parameter for
-#'   \code{\link[manytestsr]{compute_adaptive_alphas}} (only used when
-#'   \code{alpha_method = "adaptive_power"}). Smaller values produce more
-#'   generous alpha at deeper levels; \code{tau = 1} yields the nominal alpha
-#'   at every depth. Default is 0.1.
 #' @param return_details Logical. Whether to return the full simulated data.table.
 #' @param final_global_adj Character. One of \code{"none"}, \code{"fdr"}, \code{"fwer"}.
 #' @param monotonicity Logical. TRUE if we require child nodes p-values to be
@@ -96,8 +91,7 @@ simulate_test_DT <- function(treeDT, alpha, k, N_total, effect_size,
                              global_adj = "hommel",
                              alpha_method = "fixed", return_details = TRUE,
                              final_global_adj = "none",
-                             monotonicity = TRUE,
-                             tau = 0.1) {
+                             monotonicity = TRUE) {
   tree_sim <- copy(treeDT)
   tree_sim[, `:=`(p_val = NA_real_, alpha_alloc = NA_real_)]
   setkey(tree_sim, "node")
@@ -149,7 +143,7 @@ simulate_test_DT <- function(treeDT, alpha, k, N_total, effect_size,
   if (alpha_method == "adaptive_power") {
     alpha_schedule <- manytestsr::compute_adaptive_alphas(
       k = k, delta_hat = effect_size / 2, N_total = N_total,
-      tau = tau, max_depth = max_level + 1L, thealpha = alpha
+      max_depth = max_level + 1L, thealpha = alpha
     )
   }
 

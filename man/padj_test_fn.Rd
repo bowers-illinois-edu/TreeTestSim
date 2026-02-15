@@ -30,7 +30,8 @@ padj_test_fn(
   blocksize = "hwt",
   stop_splitby_constant = TRUE,
   return_details = FALSE,
-  return_bottom_up = TRUE
+  return_bottom_up = TRUE,
+  non_null_blocks = NULL
 )
 }
 \arguments{
@@ -116,6 +117,12 @@ not using simulations.}
 \item{return_bottom_up}{TRUE means that the function should also return
 results from the bottom-up (test every block and adjust) approach for
 comparison with the top-down SIUP approach. Default is TRUE.}
+
+\item{non_null_blocks}{Name of a logical column in bdat indicating which
+blocks have non-zero effects. When provided, passed to
+\code{create_effects} so the same blocks are non-null across scenarios.
+When NULL (default), \code{create_effects} randomly assigns non-null blocks
+using \code{prop_blocks_0}.}
 }
 \value{
 A pvalue for each block

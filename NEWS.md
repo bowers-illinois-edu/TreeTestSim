@@ -1,11 +1,18 @@
-# TreeTestSim 0.0.0.9301
+# TreeTestSim 0.0.0.9302
 
-## Bug fixes
+## New features
 
-* Restored the `tau` parameter to `simulate_test_DT()`, which was
-  accidentally dropped during the `effect_size` refactor. The parameter
-  is forwarded to `manytestsr::compute_adaptive_alphas()` when
-  `alpha_method = "adaptive_power"` and defaults to 0.1.
+* `padj_test_fn()` gains a `non_null_blocks` parameter. When provided (as the
+  name of a logical column in `bdat`), the same blocks are treated as non-null
+  across scenarios rather than being randomly assigned via `prop_blocks_0`.
+
+## Breaking changes
+
+* Removed the `tau` parameter from `simulate_test_DT()`.
+  `manytestsr::compute_adaptive_alphas()` now uses the error load
+  framework instead of `tau` — when the total error load is at most 1,
+  nominal alpha is used everywhere (natural gating); when it exceeds 1,
+  alpha is adjusted automatically. No tuning parameter is needed.
 
 # TreeTestSim 0.0.0.9300
 

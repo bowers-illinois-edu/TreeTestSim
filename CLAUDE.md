@@ -69,6 +69,8 @@ Uses beta-distributed p-values to simulate hierarchical testing without real dat
   - `"adaptive_power"`: depth-indexed schedule via `manytestsr::compute_adaptive_alphas`
 - `simulate_many_runs_DT()` averages results across simulation replicates
 
+Key parameters: `effect_size` (Cohen's d at each non-null leaf) drives p-value generation via `effect_size_to_beta()`, which converts Cohen's d to a Beta(a,1) shape parameter using the normal power approximation. When `power_decay = TRUE` (default), signal strength weakens at deeper levels to reflect smaller per-node sample sizes (`N_total / k^level`). The simulation also returns `root_power` — the theoretical power at the root.
+
 Key design: p-values are constrained to be monotonically non-decreasing down the tree (child p-values >= parent p-values).
 
 ### 2. Concrete Block-Randomized Experiments (`R/synthetic_data.R`, `R/padj_sim_fns.R`)
@@ -76,7 +78,7 @@ Key design: p-values are constrained to be monotonically non-decreasing down the
 Works with actual individual-level data via `manytestsr::find_blocks`:
 
 - `generate_synthetic_experiment()` creates individual/block data.tables for a k-ary tree experiment
-- `padj_test_fn()` is the main simulation driver—creates treatment effects, re-randomizes, tests, summarizes errors
+- `padj_test_fn()` is the main simulation driver — creates treatment effects, re-randomizes, tests, summarizes errors. The optional `non_null_blocks` parameter fixes which blocks have effects (rather than choosing them randomly via `prop_blocks_0`).
 - Two testing modes controlled by `p_adj_method`:
   - `"split"`: top-down via `manytestsr::find_blocks` with splitting functions
   - `"fdr"/"holm"/etc.: bottom-up via `adjust_block_tests()` using `p.adjust`
@@ -84,7 +86,7 @@ Works with actual individual-level data via `manytestsr::find_blocks`:
 ### Supporting Modules
 
 - `R/p_adjustment.R`: Local p-value adjustment functions (`local_simes`, `local_hommel_all_ps`, `local_bh_all_ps`, `local_unadj_all_ps`)
-- `R/find_blocks_simulations.R`: Treatment effect creation (`create_effects()`, `tau_*` functions)
+- `R/find_blocks_simulations.R`: Treatment effect creation (`create_effects()`, `tau_*` functions). `create_effects()` accepts an optional `non_null_blocks` column name to fix which blocks have effects.
 - `R/summarize_errors_discoveries.R`: Error rate calculations (`calc_errs`, `calc_errs_new`)
 
 ## Key Dependencies
@@ -95,10 +97,10 @@ Works with actual individual-level data via `manytestsr::find_blocks`:
 
 ## Testing Notes
 
-Tests use `testthat` edition 3. Time-consuming FWER simulations are in `tests.notforCRAN.R` and skipped by default. The main test file `test_general.R` checks all combinations of `alpha_method`, `final_adj_method`, `local_adj_method`, and `adj_effN` parameters.
+Tests use `testthat` edition 3. Time-consuming FWER simulations are in `tests.notforCRAN.R` and skipped by default. The main test file `test_general.R` checks combinations of `alpha_method`, `final_adj_method`, and `local_adj_method`. Additional test files cover the `effect_size` parameterization (`test_effect_size_param.R`), the `adaptive_power` alpha method (`test_adaptive_power_method.R`), and synthetic experiment generation (`test_synthetic_data.R`).
 
 ## Data Structures
 
-Tree nodes are stored in data.tables with columns: `node`, `level` (0 = root), `parent`, `nonnull`. Simulation results include `p_val`, `alpha_alloc`, `p_sim`, and various adjusted p-value columns.
+Tree nodes are stored in data.tables with columns: `node`, `level` (0 = root), `parent`, `nonnull`. Simulation results include `p_val`, `alpha_alloc`, `p_sim`, various adjusted p-value columns, and `root_power`.
 
 Block-level data uses columns: `bF`/`blockF` (block factor), `lvls_fac` (encodes tree ancestry as "parent.child.grandchild"), `nonnull`, `hwt` (harmonic mean weight).
