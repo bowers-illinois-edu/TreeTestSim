@@ -1,3 +1,19 @@
+# TreeTestSim 0.0.0.9303
+
+## New features
+
+* `simulate_test_DT()` gains `alpha_method = "adaptive_power_pruned"`.
+  Like `"adaptive_power"`, this pre-computes a depth-indexed alpha schedule
+  from estimated power decay. After each tree level, it counts how many
+  nodes survived (rejected) and recomputes the schedule for deeper levels
+  using the pruned node count instead of the full tree's `k^l`. When
+  branches die early, surviving branches get more alpha budget. The FWER
+  guarantee follows from the same telescoping-sum argument applied to the
+  pruned subtree.
+
+* `simulate_many_runs_DT()` passes `alpha_method = "adaptive_power_pruned"`
+  through to `simulate_test_DT()` without modification.
+
 # TreeTestSim 0.0.0.9302
 
 ## New features

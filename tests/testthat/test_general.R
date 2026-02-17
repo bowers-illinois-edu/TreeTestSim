@@ -180,7 +180,7 @@ test_that("simulate_test_DT gates branches when the local adjusted p-value excee
 
 # We use the next set of parameters in a couple of test blocks
 ## Checking that the arguments work.
-alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing")
+alpha_methods <- c("fixed", "fixed_k_adj", "adaptive_k_adj", "spending", "investing", "adaptive_power_pruned")
 final_adj_methods <- c("none", "fdr", "fwer")
 local_adj_methods <- c("local_simes", "local_hommel_all_ps", "local_bh_all_ps", "local_unadj_all_ps")
 power_decay_vals <- c(TRUE, FALSE)

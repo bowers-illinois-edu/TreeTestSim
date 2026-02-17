@@ -140,11 +140,26 @@ simulate_test_DT <- function(treeDT, alpha, k, N_total, effect_size,
   bu_bh_power <- mean(tree_sim[level == max_level & nonnull == TRUE, bu_bh_p] <= alpha)
 
   # Precompute adaptive alpha schedule if needed
-  if (alpha_method == "adaptive_power") {
+  if (alpha_method %in% c("adaptive_power", "adaptive_power_pruned")) {
     alpha_schedule <- manytestsr::compute_adaptive_alphas(
       k = k, delta_hat = effect_size / 2, N_total = N_total,
       max_depth = max_level + 1L, thealpha = alpha
     )
+  }
+
+  # For pruned method, pre-compute per-depth path power (product of ancestor
+  # thetas). These depend only on effect size and sample sizes, not on which
+  # branches survive, so we compute them once.
+  if (alpha_method == "adaptive_power_pruned") {
+    z_crit <- qnorm(1 - alpha / 2)
+    delta_hat <- effect_size / 2
+    path_power_by_depth <- numeric(max_level + 1L)
+    path_power_by_depth[1] <- 1.0  # root has no ancestors
+    for (d in 2:(max_level + 1L)) {
+      theta_prev <- pnorm(delta_hat * sqrt(N_total / k^(d - 2)) - z_crit)
+      theta_prev <- max(min(theta_prev, 1), 0)
+      path_power_by_depth[d] <- path_power_by_depth[d - 1] * theta_prev
+    }
   }
 
   # Top-down procedure
@@ -175,8 +190,12 @@ simulate_test_DT <- function(treeDT, alpha, k, N_total, effect_size,
         # Tree levels are 0-indexed (root = 0); compute_adaptive_alphas is
         # 1-indexed (root = 1). Children at tree level l -> depth l + 1.
         child_threshold <- alpha_schedule[l + 1]
+      } else if (alpha_method == "adaptive_power_pruned") {
+        # Same lookup as adaptive_power; the schedule is updated after
+        # each level to reflect branch pruning (see below).
+        child_threshold <- alpha_schedule[l + 1]
       } else {
-        stop("alpha_method must be one of 'fixed', 'spending', 'investing', 'fixed_k_adj', 'adaptive_k_adj', or 'adaptive_power'.")
+        stop("alpha_method must be one of 'fixed', 'spending', 'investing', 'fixed_k_adj', 'adaptive_k_adj', 'adaptive_power', or 'adaptive_power_pruned'.")
       }
 
       child_rows <- tree_sim[parent == parent_node & level == l]
@@ -218,6 +237,23 @@ simulate_test_DT <- function(treeDT, alpha, k, N_total, effect_size,
         p_val = child_rows$p_val,
         alpha_alloc = child_rows$alpha_alloc
       )]
+    }
+
+    # Branch pruning: after all parents at level l are processed, count
+    # how many children survived and recompute the alpha schedule for
+    # deeper levels. Fewer surviving nodes = lower error load = more
+    # alpha budget per test at subsequent depths.
+    if (alpha_method == "adaptive_power_pruned" && l < max_level) {
+      n_survived <- tree_sim[level == l & !is.na(p_val) & (p_val <= alpha_alloc), .N]
+      if (n_survived > 0L) {
+        for (d in (l + 2):(max_level + 1L)) {
+          # In pruned tree: n_survived * k^{d-1-l} nodes at depth d
+          # (vs k^{d-1} in full tree). path_power is unchanged.
+          n_nodes_pruned <- n_survived * k^(d - 1L - l)
+          sum_path_power <- n_nodes_pruned * path_power_by_depth[d]
+          alpha_schedule[d] <- min(alpha, alpha / sum_path_power)
+        }
+      }
     }
   }
 
